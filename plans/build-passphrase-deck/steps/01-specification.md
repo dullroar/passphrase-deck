@@ -30,7 +30,7 @@ word-count selection, capitalization, punctuation and digit placement,
 allowed ASCII characters, and policy errors. Define length counting for
 both variants and bound all retries. Specify how preflight handles impossible
 policies and how the runtime responds if an attempt limit is reached.
-Use Python `secrets.randbelow()` and browser `crypto.getRandomValues()` with
+Use Python `secrets.token_bytes()` and browser `crypto.getRandomValues()` with
 unbiased integer rejection sampling. For a range of size n, reject draws
 at or above the largest multiple of n within the source range before
 reducing modulo n. Keep test random sources out of the production interface. Document that the deterministic parts are the build,
@@ -83,3 +83,10 @@ entropy argument must support the recommended policy.
   required by this step. Review the six-digit tradeoff before coding. If
   the design changes, update the analysis and specification and rerun the
   full gate.
+
+## Approved correction
+
+On 2026-11-23, the owner approved replacing `secrets.randbelow()` with
+`secrets.token_bytes()` and bounded rejection. The former can retry inside
+Python without a caller-visible bound. The correction retains OS randomness
+and makes the 128-draw limit enforceable. The full gate was rerun.

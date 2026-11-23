@@ -72,8 +72,8 @@ tuple conditions the output. The fixed separators, distinct words, and
 digit alphabet make both format mappings injective. Maximum probability is
 exactly one divided by the total output count.
 
-Use `secrets.randbelow(n)` in Python. In the browser, use
-`crypto.getRandomValues()` and unbiased rejection: for a uniformly drawn
+Use `secrets.token_bytes()` in Python and `crypto.getRandomValues()` in
+the browser. Use unbiased rejection in both runtimes: for a uniformly drawn
 unsigned integer in a range of size R, reject values at or above
 `R - (R % n)` and reduce accepted values modulo n. For counts above a
 single machine word, concatenate enough random bytes, use exact integer
