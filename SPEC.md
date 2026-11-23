@@ -43,8 +43,7 @@ outputs. This choice is deterministic. The default is minimum 12, maximum 32,
 and 64 bits. Minimum 12, maximum 48, and 80 bits is also feasible. Do not
 claim that all other requests or all higher targets are feasible.
 
-For each selected tuple, join the lowercase words using ` _ ` (space,
-underscore, space). Append the independent decimal digits directly to the
+For each selected tuple, join the lowercase words using `_ ` (underscore, space). Append the independent decimal digits directly to the
 last word. The readable value is this result. The compact value removes
 only ASCII spaces. Underscores remain between words; digits remain at the
 end. Hyphens in the list remain in the words. Thus both formats are

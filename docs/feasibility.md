@@ -14,6 +14,10 @@ four hyphenated list entries as recorded, not as separate words.
 | 8 | 1,779 |
 | 9 | 1,557 |
 
+The readable separator `_ ` has two ASCII characters. The compact
+separator `_` has one. The exhaustive fixture measures formatted strings
+directly and checks the length calculation.
+
 With the format and sampling in [SPEC.md](../SPEC.md), 12–32 characters
 and 64 bits selects four words and six digits. There are 36,742,626,714,313
 valid word tuples and 36,742,626,714,313,000,000 distinct outputs. The
