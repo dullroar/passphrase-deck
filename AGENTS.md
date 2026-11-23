@@ -1,21 +1,16 @@
 # Agent contract
 
-This repository is `repo-template`. It is the template for all new repositories.
-Create a new repository from it. Do not build products in it.
+Passphrase Deck is a static browser app and a Python reference CLI for
+generating one passphrase in two formats. Follow the security requirements
+and acceptance gates in the [implementation plan](plans/build-passphrase-deck/plan.md).
 
-<!-- TEMPLATE-ONLY START: delete this section in every repository created from this template. -->
-## Template-only rules
+This repository uses [repo-template](https://github.com/dullroar/repo-template)
+and [ralph-looper](https://github.com/dullroar/ralph-looper). Check both
+contracts before changing the repository structure or plan format.
 
-- This repository defines the standard layout, rules and scripts. Other repositories copy them.
-- Keep it generic. Do not add project names, personal paths, hosts or user names.
-- The files `scripts/hello-listing.sh`, `scripts/hello-listing.ps1` and `memory/example-memory.md` are examples. Delete them in new repositories.
-- After you create a new repository from the template:
-  1. Replace the first paragraph of this file with one or two sentences about the new project.
-  2. Delete this section.
-  3. Delete the `Dockerfile` if the project is only for Windows. Add Windows Sandbox instructions to `docs/` instead.
-  4. Update `README.md` and `LICENSE`.
-  5. Run `python3 scripts/build_indexes.py`.
-<!-- TEMPLATE-ONLY END -->
+Run the initial implementation plan with Claude through Ralph. Use
+controlled test inputs for examples and test evidence. Keep generated
+passphrases out of chat, agent prompts, logs, and test reports.
 
 ## Standing rules
 
