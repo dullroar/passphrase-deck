@@ -15,7 +15,6 @@ Read the list. Open only the files whose "Read me when" line matches your task.
 
 <!-- BEGIN GENERATED INDEX -->
 
-* [example-memory.md](./example-memory.md)
-  Read me when: you want to see the format of a memory file. (Template only. Delete this file in new repositories.)
+<!-- Nothing to list yet. -->
 
 <!-- END GENERATED INDEX -->

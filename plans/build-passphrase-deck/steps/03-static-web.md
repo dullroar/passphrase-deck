@@ -1,0 +1,45 @@
+---
+id: 03-static-web
+status: pending
+depends_on: [02-python-reference]
+touches:
+  - web/**
+  - tests/browser/**
+  - plans/build-passphrase-deck/steps/03-static-web.md
+lane: none
+gate: python3 scripts/verify_wordlist.py && (cd tests/browser && npm ci && npx --no-install playwright install chromium && npm test) && python3 scripts/check_context.py && git diff --check
+evidence: ""
+---
+
+# Build and test the static browser app
+
+Use plain HTML, CSS, and JavaScript with same-origin app files and a
+bundled wordlist verified against the pinned source. Use the browser
+CSPRNG and the accepted unbiased selection and policy logic. Generate
+without an API, runtime third-party dependencies, or a network request.
+If the user asks for an infeasible policy, suggest a feasible longer
+maximum, permitted options, or word count that meets the entropy floor.
+
+Provide a prominent **Deal another pair** action. Show the two formats
+side by side on wide screens and stacked on phones. Make clear that this is
+one secret. Give each format a separate, accessible reveal and copy
+control. Keep secrets visually private by default where practical and
+avoid keeping secret text in the DOM longer than needed. Report clipboard
+denial accurately. Avoid clipboard clearance claims and network fallbacks.
+
+Expose min and max length, minimum entropy, punctuation and digit options,
+capitalization, and a restrictive-site compatibility preset. Keep settings
+in page memory. Discard generated values on reload. Place no secret in
+storage, cookies, URLs, diagnostics, telemetry, or caches.
+
+Pin Playwright and the other browser test dependencies in
+`tests/browser/`. Use them only for verification. The gate needs Node.js,
+npm, Chromium system libraries, and access to the pinned test tooling or
+its cache. Test controlled parity with the Python vectors, including
+unbiased rejection and error paths. Test keyboard use, accessibility
+semantics, copy and reveal behavior, responsive layouts, and reload.
+Check screen-reader behavior and record the environment. Intercept
+requests during generation and copy after initial asset load. Check URLs,
+cookies, local storage, session storage, logs, and caches for secret values.
+Use fixtures that keep assertion output free of real secrets.
+Record gate evidence in this step.
