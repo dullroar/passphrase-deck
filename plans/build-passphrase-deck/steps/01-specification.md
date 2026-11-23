@@ -1,6 +1,6 @@
 ---
 id: 01-specification
-status: blocked
+status: done
 depends_on: []
 touches:
   - SPEC.md
@@ -14,7 +14,7 @@ touches:
   - plans/build-passphrase-deck/steps/01-specification.md
 lane: none
 gate: python3 scripts/verify_wordlist.py && python3 scripts/check_feasibility.py && python3 scripts/check_context.py && git diff --check
-evidence: "2026-11-23: earlier gate passed but its readable-length calculation is incorrect; design blocked."
+evidence: "2026-11-23: full gate passed after approved separator correction; see evidence below."
 ---
 
 # Specify the generator and prove the feasible policies
@@ -100,3 +100,11 @@ does not prove the stated entropy. Corrected counts give approximately
 the specified schemes. The default must not be used under the stated
 64-bit floor. Select a revised format or policy, correct the analysis and
 tests, and rerun this gate. Step 02 records the evidence and alternatives.
+
+## Approved separator correction
+
+On 2026-11-23, the owner agreed to use `_ ` as the readable separator.
+It has two characters and becomes `_` in the compact format. The prior
+12–32 and 12–48 counts now match the specified format. The exhaustive
+fixture checks formatted string lengths directly. The full gate passed:
+`python3 scripts/verify_wordlist.py && python3 scripts/check_feasibility.py && python3 scripts/check_context.py && git diff --check`.

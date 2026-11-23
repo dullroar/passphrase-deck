@@ -36,8 +36,9 @@ def self_test():
     fixture = ('a', 'a-b', 'ba')
     lengths = Counter(map(len, fixture))
     tuples = [t for t in product(fixture, repeat=2)
-              if 3 <= sum(map(len, t)) + 1 and sum(map(len, t)) + 2 <= 7]
-    encoded = ['_'.join(t) for t in tuples]
+              if 3 <= len('_ '.join(t).replace(' ', ''))
+              and len('_ '.join(t)) <= 7]
+    encoded = ['_ '.join(t).replace(' ', '') for t in tuples]
     assert len(encoded) == len(set(encoded))
     assert len(encoded) == count_sequences(lengths, 2, 0, 3, 7)
     # Enumerate every rank through the weighted prefix decoder.
