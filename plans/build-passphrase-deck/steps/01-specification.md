@@ -1,6 +1,6 @@
 ---
 id: 01-specification
-status: pending
+status: blocked
 depends_on: []
 touches:
   - SPEC.md
@@ -14,7 +14,7 @@ touches:
   - plans/build-passphrase-deck/steps/01-specification.md
 lane: none
 gate: python3 scripts/verify_wordlist.py && python3 scripts/check_feasibility.py && python3 scripts/check_context.py && git diff --check
-evidence: ""
+evidence: "2026-11-23: gate failed; verify_wordlist.py is missing. See resume notes."
 ---
 
 # Specify the generator and prove the feasible policies
@@ -67,3 +67,16 @@ the result. Update the docs and script indexes.
 Record the exact gate, date, results, the selected default behavior, and
 any decision still needed. Both the reproducible analysis and the written
 entropy argument must support the recommended policy.
+
+## Resume notes
+
+- On 2026-11-23, the prescribed Ralph launch selected this step and created
+  its worktree and branch. Claude produced no output or file changes during
+  the observed attempt. The attempt was interrupted. The cause is unknown.
+- The gate was run on 2026-11-23:
+  `python3 scripts/verify_wordlist.py && python3 scripts/check_feasibility.py && python3 scripts/check_context.py && git diff --check`.
+  It failed with exit code 2 because `scripts/verify_wordlist.py` does not
+  exist. The remaining commands did not run as part of that gate.
+- No specification, wordlist verification, feasibility analysis, or default
+  policy decision is complete. Restore the Claude through Ralph workflow,
+  then implement this step and rerun the full gate before marking it done.
