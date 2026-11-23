@@ -1,6 +1,6 @@
 ---
 id: 02-python-reference
-status: blocked
+status: done
 depends_on: [01-specification]
 touches:
   - python/**
@@ -9,7 +9,7 @@ touches:
   - plans/build-passphrase-deck/steps/02-python-reference.md
 lane: none
 gate: python3 scripts/verify_wordlist.py && python3 -m unittest discover -s tests -p 'test_*.py' && python3 scripts/check_context.py && git diff --check
-evidence: "2026-11-23: gate failed; earlier feasibility calculation does not match the specified format. See resume notes."
+evidence: "2026-11-23: full gate passed after approved design corrections; see completion evidence."
 ---
 
 # Implement the standard-library Python reference
@@ -84,3 +84,15 @@ evidence in this step.
   changes the default range and needs the owner's decision. Review the
   alternatives, revise step 01 within its permitted files, rerun its gate,
   then update this implementation and rerun the step 02 gate.
+
+## Completion evidence
+
+- On 2026-11-23, the owner agreed to the `_ ` readable separator. Step 01
+  was corrected and its complete gate passed. The corrected design is on
+  the plan branch and included in this step branch.
+- The reference uses bounded rejection with `secrets.token_bytes`, exact
+  integer counts, and deterministic unranking. Shared vectors use public
+  synthetic words and controlled ranks. The tests check formatted lengths
+  at rank boundaries and exhaustively check a small fixture.
+- On 2026-11-23, this full gate passed with exit code 0:
+  `python3 scripts/verify_wordlist.py && python3 -m unittest discover -s tests -p 'test_*.py' && python3 scripts/check_context.py && git diff --check`.

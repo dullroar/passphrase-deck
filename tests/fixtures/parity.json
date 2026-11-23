@@ -6,8 +6,8 @@
   "minimum": 4,
   "maximum": 9,
   "vectors": [
-    {"rank": 0, "readable": "a _ a0", "compact": "a_a0"},
-    {"rank": 19, "readable": "a _ a-b9", "compact": "a_a-b9"},
-    {"rank": 79, "readable": "ba _ ba9", "compact": "ba_ba9"}
+    {"rank": 0, "readable": "a_ a0", "compact": "a_a0"},
+    {"rank": 19, "readable": "a_ a-b9", "compact": "a_a-b9"},
+    {"rank": 89, "readable": "ba_ ba9", "compact": "ba_ba9"}
   ]
 }

@@ -1,4 +1,5 @@
 import contextlib
+import hashlib
 import importlib.util
 import io
 import itertools
@@ -27,6 +28,20 @@ class GeneratorTests(unittest.TestCase):
             path.write_bytes(b'public corrupt fixture\n')
             with self.assertRaisesRegex(ValueError, 'wordlist verification failed'):
                 generator.load_words(path)
+            raw = generator.WORDLIST.read_bytes()
+            records = raw.splitlines(keepends=True)
+            mutations = [
+                b''.join(records[:-1]),
+                raw.replace(b'11111\t', b'11112\t', 1),
+                raw.replace(records[1], records[1].split(b'\t')[0] + b'\t' + records[0].split(b'\t')[1], 1),
+                raw.replace(b'abacus', b'aba cus', 1),
+                raw.replace(b'abacus', b'\xff', 1),
+            ]
+            for contents in mutations:
+                path.write_bytes(contents)
+                with mock.patch.object(generator, 'DIGEST', hashlib.sha256(contents).hexdigest()):
+                    with self.assertRaises((ValueError, UnicodeError)):
+                        generator.load_words(path)
 
     def test_policy_and_bounds(self):
         count, digits, outputs, _ = generator.select_policy(self.words, 12, 32, 64)
@@ -49,7 +64,7 @@ class GeneratorTests(unittest.TestCase):
         expected = set()
         for parts in itertools.product(words, repeat=count):
             for digit in range(10 ** digits):
-                readable = ' _ '.join(parts) + str(digit).zfill(digits)
+                readable = '_ '.join(parts) + str(digit).zfill(digits)
                 compact = readable.replace(' ', '')
                 if f['minimum'] <= len(compact) and len(readable) <= f['maximum']:
                     expected.add((readable, compact))
@@ -58,6 +73,16 @@ class GeneratorTests(unittest.TestCase):
                   for rank in range(total)]
         self.assertEqual(len(actual), len(set(actual)))
         self.assertEqual(set(actual), expected)
+
+    def test_real_list_rank_boundaries(self):
+        for minimum, maximum, entropy in ((12, 32, 64), (12, 48, 80)):
+            count, digits, total, suffix = generator.select_policy(
+                self.words, minimum, maximum, entropy)
+            for rank in (0, total // 2, total - 1):
+                readable, compact = generator._unrank(self.words, count, digits, rank, suffix)
+                self.assertEqual(compact, readable.replace(' ', ''))
+                self.assertTrue(minimum <= len(readable) <= maximum)
+                self.assertTrue(minimum <= len(compact) <= maximum)
 
     def test_unbiased_rejection_and_limit(self):
         # One-byte values 250–255 are rejected for n=10.

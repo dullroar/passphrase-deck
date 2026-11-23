@@ -48,7 +48,7 @@ def _completions(words, count, digits, minimum, maximum):
     def suffix(remaining, length):
         if not remaining:
             return int(minimum <= length + digits + count - 1 and
-                       length + digits + 3 * (count - 1) <= maximum)
+                       length + digits + 2 * (count - 1) <= maximum)
         return sum(quantity * suffix(remaining - 1, length + size)
                    for size, quantity in lengths.items())
 
@@ -84,7 +84,7 @@ def _unrank(words, count, digits, rank, suffix):
             raise ValueError('rank outside valid range')
     if tuple_rank:
         raise ValueError('rank outside valid range')
-    readable = ' _ '.join(selected) + str(digit_rank).zfill(digits)
+    readable = '_ '.join(selected) + str(digit_rank).zfill(digits)
     return readable, readable.replace(' ', '')
 
 
