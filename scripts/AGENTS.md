@@ -17,6 +17,8 @@ Read the list. Run only the scripts whose "Run me when" line matches your task.
   Run me when: I added, renamed, deleted or changed the gist of a memory, a plan or a script, and before every pull request.
 * [check_context.py](./check_context.py)
   Run me when: I changed any context file, and before every pull request.
+* [check_feasibility.py](./check_feasibility.py)
+  Run me when: I need to reproduce the policy entropy and feasibility checks.
 * [check_links.py](./check_links.py)
   Run me when: I changed or moved any Markdown file, and before every pull request.
 * [check_plan.py](./check_plan.py)
@@ -25,5 +27,7 @@ Read the list. Run only the scripts whose "Run me when" line matches your task.
   Run me when: never directly. Other scripts in this folder import it.
 * [scan_secrets.py](./scan_secrets.py)
   Run me when: I changed AGENTS.md, CLAUDE.md, docs/, memory/ or plans/, and before every pull request.
+* [verify_wordlist.py](./verify_wordlist.py)
+  Run me when: I need to verify the pinned EFF wordlist.
 
 <!-- END GENERATED INDEX -->

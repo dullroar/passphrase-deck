@@ -1,6 +1,6 @@
 ---
 id: 01-specification
-status: blocked
+status: done
 depends_on: []
 touches:
   - SPEC.md
@@ -14,7 +14,7 @@ touches:
   - plans/build-passphrase-deck/steps/01-specification.md
 lane: none
 gate: python3 scripts/verify_wordlist.py && python3 scripts/check_feasibility.py && python3 scripts/check_context.py && git diff --check
-evidence: "2026-11-23: gate failed; verify_wordlist.py is missing. See resume notes."
+evidence: "2026-11-23: full gate passed; default and entropy evidence recorded below."
 ---
 
 # Specify the generator and prove the feasible policies
@@ -68,15 +68,18 @@ Record the exact gate, date, results, the selected default behavior, and
 any decision still needed. Both the reproducible analysis and the written
 entropy argument must support the recommended policy.
 
-## Resume notes
+## Evidence and resume notes
 
-- On 2026-11-23, the prescribed Ralph launch selected this step and created
-  its worktree and branch. Claude produced no output or file changes during
-  the observed attempt. The attempt was interrupted. The cause is unknown.
-- The gate was run on 2026-11-23:
+- On 2026-11-23, the prescribed Ralph launch selected this step. Its Claude
+  attempt produced no output or file changes before it was interrupted.
+  The owner then directed Codex to perform the work.
+- On 2026-11-23, the complete gate passed with exit code 0:
   `python3 scripts/verify_wordlist.py && python3 scripts/check_feasibility.py && python3 scripts/check_context.py && git diff --check`.
-  It failed with exit code 2 because `scripts/verify_wordlist.py` does not
-  exist. The remaining commands did not run as part of that gate.
-- No specification, wordlist verification, feasibility analysis, or default
-  policy decision is complete. Restore the Claude through Ralph workflow,
-  then implement this step and rerun the full gate before marking it done.
+- The selected default is 12–32 characters, at least 64 bits, four words,
+  and six independent decimal digits. Both formats have about 64.994089
+  bits of min-entropy under the specified sampler. The 12–48, 80-bit policy
+  also passed. See [the analysis](../../../docs/feasibility.md).
+- The requested range and wordlist are unchanged. No owner decision is
+  required by this step. Review the six-digit tradeoff before coding. If
+  the design changes, update the analysis and specification and rerun the
+  full gate.
