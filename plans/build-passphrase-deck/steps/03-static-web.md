@@ -8,7 +8,9 @@ touches:
   - plans/build-passphrase-deck/steps/03-static-web.md
 lane: none
 gate: python3 scripts/verify_wordlist.py && (cd tests/browser && npm ci && npx --no-install playwright install chromium && npm test) && python3 scripts/check_context.py && git diff --check
-evidence: "Gate passed: wordlist check, 27 Playwright tests (Chromium, pinned 1.65.1), context check, diff check."
+evidence: gate passed 2026-11-24 (driver-verified)
+claimed_by: claude cli-default
+claimed_at: "2026-11-24T02:04:08Z"
 ---
 
 # Build and test the static browser app
