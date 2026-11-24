@@ -4,7 +4,7 @@
 Run me when: I created or changed a plan or a step, and before a plan loop starts.
 
 Layout: plans/<plan>/goal.md, plans/<plan>/plan.md and plans/<plan>/steps/<id>.md.
-plans/for-each-plan (the template) and plans/archive are skipped. Each step has front matter:
+plans/for-each-plan (the template) and plans/archive are skipped, and so is a plan folder that holds only archive/. Each step has front matter:
 id, status (pending|in_progress|done|blocked), depends_on, touches, lane, gate.
 Optional: claimed_by, claimed_at, result, evidence (a done step needs evidence).
 
@@ -122,7 +122,8 @@ def main(argv: list[str]) -> int:
     plans = root / "plans"
     errors: list[str] = []
     if plans.is_dir():
-        for plan in sorted(p for p in plans.iterdir() if p.is_dir() and p.name not in {"for-each-plan", "archive"}):
+        for plan in sorted(p for p in plans.iterdir() if p.is_dir() and p.name not in {"for-each-plan", "archive"}
+                       and {c.name for c in p.iterdir()} != {"archive"}):  # a fully archived plan
             errors.extend(check_plan(plan, root))
     for err in errors:
         print(f"ERROR {err}")
