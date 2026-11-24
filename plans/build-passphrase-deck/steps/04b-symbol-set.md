@@ -96,6 +96,10 @@ denied `npm`, `npx` and `node`. These files changed and need a run of
 `tests/browser/core.spec.js`, `tests/browser/single.spec.js`,
 `tests/browser/offline.spec.js`.
 
+Second session: `npm ci` was denied again by the shell (don't-ask mode). The
+browser gate is still not run. The owner must allow `npm`, `npx` and `node`,
+or run the browser gate by hand.
+
 Next agent: run the browser gate. Fix any failure. Likely risks: the new
 `#symbols-error` alert and `getByRole('alert')` strict mode in `app.spec.js`;
 the `settings input` count (now 5). Then run `git diff --check`, set
