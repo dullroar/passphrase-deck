@@ -1,7 +1,7 @@
 ---
 id: 05-production-verification
 status: pending
-depends_on: [04-offline-release, 04a-single-file-release]
+depends_on: [04-offline-release, 04a-single-file-release, 04b-symbol-set]
 touches:
   - docs/release-evidence.json
   - docs/README.md
