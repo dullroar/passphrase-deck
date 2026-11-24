@@ -68,7 +68,7 @@ def select_policy(words, minimum, maximum, entropy):
     raise PolicyError('POLICY_UNSUPPORTED: increase maximum or lower entropy target')
 
 
-def _unrank(words, count, digits, rank, suffix):
+def _unrank(words, count, digits, rank, suffix, capitalize=False):
     tuple_rank, digit_rank = divmod(rank, 10 ** digits)
     selected = []
     length = 0
@@ -84,6 +84,8 @@ def _unrank(words, count, digits, rank, suffix):
             raise ValueError('rank outside valid range')
     if tuple_rank:
         raise ValueError('rank outside valid range')
+    if capitalize:
+        selected = [word[0].upper() + word[1:] for word in selected]
     readable = '_ '.join(selected) + str(digit_rank).zfill(digits)
     return readable, readable.replace(' ', '')
 
@@ -104,10 +106,10 @@ def _randbelow(n, draw):
     raise RandomLimitError('RANDOM_LIMIT')
 
 
-def generate(words, minimum=12, maximum=32, entropy=64):
+def generate(words, minimum=12, maximum=32, entropy=64, capitalize=False):
     count, digits, outputs, suffix = select_policy(words, minimum, maximum, entropy)
     rank = _randbelow(outputs, secrets.token_bytes)
-    return _unrank(words, count, digits, rank, suffix)
+    return _unrank(words, count, digits, rank, suffix, capitalize)
 
 
 def main(argv=None):
@@ -115,6 +117,8 @@ def main(argv=None):
     parser.add_argument('--min', dest='minimum', type=int, default=12)
     parser.add_argument('--max', dest='maximum', type=int, default=32)
     parser.add_argument('--entropy', type=int, default=64)
+    parser.add_argument('--capitalize', action='store_true',
+                        help='capitalize the first letter of each word')
     parser.add_argument('--count', type=int, default=1, help='number of pairs (1–1000)')
     args = parser.parse_args(argv)
     if not 1 <= args.count <= 1000:
@@ -123,7 +127,8 @@ def main(argv=None):
         words = load_words()
         select_policy(words, args.minimum, args.maximum, args.entropy)
         for _ in range(args.count):
-            readable, compact = generate(words, args.minimum, args.maximum, args.entropy)
+            readable, compact = generate(words, args.minimum, args.maximum, args.entropy,
+                                           args.capitalize)
             print(readable)
             print(compact)
     except (OSError, UnicodeError, ValueError, RandomLimitError) as exc:

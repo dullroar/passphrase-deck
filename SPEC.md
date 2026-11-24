@@ -47,9 +47,20 @@ For each selected tuple, join the lowercase words using `_ ` (underscore, space)
 last word. The readable value is this result. The compact value removes
 only ASCII spaces. Underscores remain between words; digits remain at the
 end. Hyphens in the list remain in the words. Thus both formats are
-reversibly split into the same ordered words and digit string. Capitalization
-is fixed lowercase. Underscores are fixed punctuation. Neither adds entropy.
-No other capitalization or punctuation option is defined by this version.
+reversibly split into the same ordered words and digit string.
+
+Capitalization is an option. It is off by default. When it is on, change
+the first character of each word to upper case and keep all other
+characters unchanged. The word length does not change. The option adds no
+entropy and does not change the counts, the ranks, or the length checks.
+It applies to both formats in the same way. A hyphen in a word stays a
+hyphen. Underscores are fixed punctuation and add no entropy. The digit count
+is fixed by the scheme. No other capitalization or punctuation option is
+defined by this version.
+
+Design decision (2026-11-23, owner): many sites require a mix of upper and
+lower case letters. A first-letter rule is easy to enter on a phone. A random
+case rule is not.
 
 ## Uniform selection
 

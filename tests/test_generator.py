@@ -84,6 +84,20 @@ class GeneratorTests(unittest.TestCase):
                 self.assertTrue(minimum <= len(readable) <= maximum)
                 self.assertTrue(minimum <= len(compact) <= maximum)
 
+    def test_capitalize_option(self):
+        f = self.fixture
+        words = f['words']
+        count, digits = f['word_count'], f['digits']
+        suffix = generator._completions(words, count, digits, f['minimum'], f['maximum'])
+        for vector in f['vectors']:
+            plain = generator._unrank(words, count, digits, vector['rank'], suffix)
+            caps = generator._unrank(words, count, digits, vector['rank'], suffix, True)
+            self.assertEqual(len(caps[0]), len(plain[0]))
+            self.assertEqual(caps[1], caps[0].replace(' ', ''))
+            self.assertEqual(caps[0].lower(), plain[0].lower())
+            for word in caps[0].split('_ ')[:count]:
+                self.assertTrue(word[0].isupper())
+
     def test_unbiased_rejection_and_limit(self):
         # One-byte values 250–255 are rejected for n=10.
         values = iter((b'\xff', b'\x14'))

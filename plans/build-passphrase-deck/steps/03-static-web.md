@@ -27,8 +27,10 @@ control. Keep secrets visually private by default where practical and
 avoid keeping secret text in the DOM longer than needed. Report clipboard
 denial accurately. Avoid clipboard clearance claims and network fallbacks.
 
-Expose min and max length, minimum entropy, punctuation and digit options,
-capitalization, and a restrictive-site compatibility preset. Keep settings
+Expose min and max length, minimum entropy, and the capitalize-first-letter
+option that `SPEC.md` defines. Punctuation and digits are fixed by `SPEC.md`.
+Do not add controls for them. Add a restrictive-site preset that turns on
+capitalization. Match `python/passphrase.py --capitalize` in the parity tests. Keep settings
 in page memory. Discard generated values on reload. Place no secret in
 storage, cookies, URLs, diagnostics, telemetry, or caches.
 
