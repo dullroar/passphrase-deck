@@ -108,7 +108,7 @@ The verifier only reads. Run it from a checkout of the reviewed revision:
 
 ```sh
 python3 scripts/verify_release.py \
-  --production https://dullroar.com/passphrase/ \
+  --production https://dullroar.com/passphrase.html \
   --evidence docs/release-evidence.json \
   --manifest "$RALPH_WORK/release/release-manifest.json"
 ```
@@ -123,7 +123,7 @@ with the hosted address:
 
 ```sh
 cd tests/browser
-DECK_SITE_URL=https://dullroar.com/passphrase/ npx --no-install playwright test offline.spec.js
+DECK_SITE_URL=https://dullroar.com/passphrase.html npx --no-install playwright test offline.spec.js
 ```
 
 ## Evidence file
@@ -163,7 +163,7 @@ roles, not names. Never write a generated value. The file has four parts:
     "deployed_revision": "<same revision>",
     "authorized": true,
     "authorized_by_role": "owner",
-    "url": "https://dullroar.com/passphrase/",
+    "url": "https://dullroar.com/passphrase.html",
     "date": "YYYY-MM-DD"
   }
 }

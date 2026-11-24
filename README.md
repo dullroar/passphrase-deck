@@ -10,7 +10,7 @@ The browser generates locally with the browser's cryptographic random
 number generator and a bundled, pinned wordlist. The page has no accounts,
 analytics, or password history. A standard-library Python CLI is the
 reference implementation. The planned web address is
-`https://dullroar.com/passphrase/`.
+`https://dullroar.com/passphrase.html`.
 
 The release is prepared. The independent review, the real-phone checks and
 the production check are still open. See the

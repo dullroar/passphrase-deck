@@ -1,13 +1,13 @@
 ---
 id: 05-production-verification
 status: pending
-depends_on: [04-offline-release]
+depends_on: [04-offline-release, 04a-single-file-release]
 touches:
   - docs/release-evidence.json
   - docs/README.md
   - plans/build-passphrase-deck/steps/05-production-verification.md
 lane: none
-gate: python3 scripts/verify_release.py --production https://dullroar.com/passphrase/ --evidence docs/release-evidence.json && python3 scripts/check_context.py && git diff --check
+gate: python3 scripts/verify_release.py --production https://dullroar.com/passphrase.html --evidence docs/release-evidence.json && python3 scripts/check_context.py && git diff --check
 evidence: ""
 ---
 
