@@ -1,0 +1,13 @@
+{
+  "description": "Public synthetic words and controlled ranks; these are not secrets.",
+  "words": ["a", "a-b", "ba"],
+  "word_count": 2,
+  "digits": 1,
+  "minimum": 4,
+  "maximum": 9,
+  "vectors": [
+    {"rank": 0, "readable": "a_ a0", "compact": "a_a0"},
+    {"rank": 19, "readable": "a_ a-b9", "compact": "a_a-b9"},
+    {"rank": 89, "readable": "ba_ ba9", "compact": "ba_ba9"}
+  ]
+}

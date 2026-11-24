@@ -38,7 +38,8 @@ product source distribution under the owner's control.
 | [02-python-reference](steps/02-python-reference.md) | Implement and test the reference CLI. | 01 |
 | [03-static-web](steps/03-static-web.md) | Implement the responsive app and verify browser isolation and parity. | 02 |
 | [04-offline-release](steps/04-offline-release.md) | Package and verify the offline release and prepare release instructions. | 03 |
-| [05-production-verification](steps/05-production-verification.md) | Verify the reviewed release on the production host and record acceptance evidence. | 04 and operator handoff |
+| [04a-single-file-release](steps/04a-single-file-release.md) | Build one self-contained `passphrase.html` with hash-based CSP. | 04 |
+| [05-production-verification](steps/05-production-verification.md) | Verify the reviewed release on the production host and record acceptance evidence. | 04a and operator handoff |
 
 The steps run in order. Later steps use the accepted specification, reference
 fixtures, or release artifact from earlier steps.
@@ -59,7 +60,7 @@ the mode tested and any operating-system limitations. Emulator results can
 supplement the real-device checks.
 
 After review, the owner authorizes and performs or delegates deployment to
-`https://dullroar.com/passphrase/`. The owner also decides which source files
+`https://dullroar.com/passphrase.html`. The owner also decides which source files
 and versioned artifacts may be published under the proprietary license and
 the wordlist's terms. Supply the sanitized review, phone, and deployment
 evidence to Claude outside the repository. Start step 05 only after those

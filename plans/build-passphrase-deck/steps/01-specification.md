@@ -1,6 +1,6 @@
 ---
 id: 01-specification
-status: pending
+status: done
 depends_on: []
 touches:
   - SPEC.md
@@ -14,7 +14,7 @@ touches:
   - plans/build-passphrase-deck/steps/01-specification.md
 lane: none
 gate: python3 scripts/verify_wordlist.py && python3 scripts/check_feasibility.py && python3 scripts/check_context.py && git diff --check
-evidence: ""
+evidence: "2026-11-23: full gate passed after approved separator correction; see evidence below."
 ---
 
 # Specify the generator and prove the feasible policies
@@ -30,7 +30,7 @@ word-count selection, capitalization, punctuation and digit placement,
 allowed ASCII characters, and policy errors. Define length counting for
 both variants and bound all retries. Specify how preflight handles impossible
 policies and how the runtime responds if an attempt limit is reached.
-Use Python `secrets.randbelow()` and browser `crypto.getRandomValues()` with
+Use Python `secrets.token_bytes()` and browser `crypto.getRandomValues()` with
 unbiased integer rejection sampling. For a range of size n, reject draws
 at or above the largest multiple of n within the source range before
 reducing modulo n. Keep test random sources out of the production interface. Document that the deterministic parts are the build,
@@ -67,3 +67,44 @@ the result. Update the docs and script indexes.
 Record the exact gate, date, results, the selected default behavior, and
 any decision still needed. Both the reproducible analysis and the written
 entropy argument must support the recommended policy.
+
+## Evidence and resume notes
+
+- On 2026-11-23, the prescribed Ralph launch selected this step. Its Claude
+  attempt produced no output or file changes before it was interrupted.
+  The owner then directed Codex to perform the work.
+- On 2026-11-23, the complete gate passed with exit code 0:
+  `python3 scripts/verify_wordlist.py && python3 scripts/check_feasibility.py && python3 scripts/check_context.py && git diff --check`.
+- The selected default is 12–32 characters, at least 64 bits, four words,
+  and six independent decimal digits. Both formats have about 64.994089
+  bits of min-entropy under the specified sampler. The 12–48, 80-bit policy
+  also passed. See [the analysis](../../../docs/feasibility.md).
+- The requested range and wordlist are unchanged. No owner decision is
+  required by this step. Review the six-digit tradeoff before coding. If
+  the design changes, update the analysis and specification and rerun the
+  full gate.
+
+## Approved correction
+
+On 2026-11-23, the owner approved replacing `secrets.randbelow()` with
+`secrets.token_bytes()` and bounded rejection. The former can retry inside
+Python without a caller-visible bound. The correction retains OS randomness
+and makes the 128-draw limit enforceable. The full gate was rerun.
+
+## Feasibility correction needed
+
+On 2026-11-23, step 02 boundary tests showed that the analysis counts
+` _ ` as two characters although it has three. The earlier gate passed but
+does not prove the stated entropy. Corrected counts give approximately
+60.521378 bits for the 12–32 default and 76.175629 bits for 12–48 with
+the specified schemes. The default must not be used under the stated
+64-bit floor. Select a revised format or policy, correct the analysis and
+tests, and rerun this gate. Step 02 records the evidence and alternatives.
+
+## Approved separator correction
+
+On 2026-11-23, the owner agreed to use `_ ` as the readable separator.
+It has two characters and becomes `_` in the compact format. The prior
+12–32 and 12–48 counts now match the specified format. The exhaustive
+fixture checks formatted string lengths directly. The full gate passed:
+`python3 scripts/verify_wordlist.py && python3 scripts/check_feasibility.py && python3 scripts/check_context.py && git diff --check`.

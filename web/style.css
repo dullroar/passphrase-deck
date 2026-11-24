@@ -1,0 +1,20 @@
+:root { color-scheme: light dark; font-family: system-ui, sans-serif; line-height: 1.5; }
+body { margin: 0; }
+main { max-width: 60rem; margin: 0 auto; padding: 1rem; }
+.lead, .hint { max-width: 40rem; }
+.hint { font-size: 0.9rem; opacity: 0.85; }
+.deal { font-size: 1.4rem; font-weight: 700; padding: 0.8rem 1.6rem; min-height: 3rem; width: 100%; max-width: 24rem; }
+button { font: inherit; padding: 0.5rem 1rem; min-height: 2.75rem; cursor: pointer; }
+button:disabled { cursor: not-allowed; }
+:focus-visible { outline: 3px solid #1a5fb4; outline-offset: 2px; }
+.error { border: 2px solid #c01c28; padding: 0.5rem 0.75rem; }
+.pair { display: grid; grid-template-columns: 1fr; gap: 1rem; }
+@media (min-width: 48rem) { .pair { grid-template-columns: 1fr 1fr; } }
+.card { border: 2px solid currentColor; border-radius: 0.5rem; padding: 0.75rem 1rem; }
+.card h3 { margin-top: 0; }
+.value code { display: block; font-size: 1.2rem; overflow-wrap: anywhere; white-space: pre-wrap; min-height: 1.8rem; }
+.actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.field { display: flex; flex-direction: column; gap: 0.25rem; max-width: 20rem; }
+.field.check { flex-direction: row; align-items: center; gap: 0.5rem; }
+.field input[type=number] { font: inherit; padding: 0.4rem; min-height: 2.5rem; }
+.field.check input { width: 1.5rem; height: 1.5rem; }
