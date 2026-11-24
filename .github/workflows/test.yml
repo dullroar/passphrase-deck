@@ -1,0 +1,37 @@
+name: test
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  product:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify the wordlist
+        run: python3 scripts/verify_wordlist.py
+      - name: Run the Python tests
+        run: python3 -m unittest discover -s tests -p 'test_*.py'
+      - name: Install the pinned browser test tools
+        working-directory: tests/browser
+        run: |
+          npm ci
+          npx --no-install playwright install --with-deps chromium
+      - name: Scan test dependencies
+        working-directory: tests/browser
+        run: npm audit --audit-level=high
+      - name: Run the browser tests
+        working-directory: tests/browser
+        run: npm test
+      - name: Check the release build
+        run: python3 scripts/verify_release.py --self-test
+      - name: Check context files
+        run: python3 scripts/check_context.py

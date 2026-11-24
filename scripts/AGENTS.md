@@ -25,8 +25,12 @@ Read the list. Run only the scripts whose "Run me when" line matches your task.
   Run me when: I created or changed a plan or a step, and before a plan loop starts.
 * [ctx_common.py](./ctx_common.py)
   Run me when: never directly. Other scripts in this folder import it.
+* [package_release.py](./package_release.py)
+  Run me when: I need to build the versioned static and offline release files.
 * [scan_secrets.py](./scan_secrets.py)
   Run me when: I changed AGENTS.md, CLAUDE.md, docs/, memory/ or plans/, and before every pull request.
+* [verify_release.py](./verify_release.py)
+  Run me when: I need to verify a release build, a folder, or the production host.
 * [verify_wordlist.py](./verify_wordlist.py)
   Run me when: I need to verify the pinned EFF wordlist.
 
