@@ -1,6 +1,6 @@
 ---
 id: 04b-symbol-set
-status: pending
+status: done
 depends_on: [04a-single-file-release]
 touches:
   - SPEC.md
@@ -20,7 +20,7 @@ touches:
   - plans/build-passphrase-deck/steps/05-production-verification.md
 lane: none
 gate: python3 scripts/verify_wordlist.py && python3 -m unittest discover -s tests -p 'test_*.py' && python3 scripts/check_feasibility.py && (cd tests/browser && npm ci && npx --no-install playwright install chromium && npm test) && python3 scripts/verify_release.py --self-test && python3 scripts/check_context.py && git diff --check
-evidence: ""
+evidence: "Gate passed 2026-11-24: wordlist verified; 15 Python tests OK; feasibility checks passed; 47 browser tests passed; verify_release self-test passed; check_context and git diff --check clean."
 ---
 
 # Let the user choose the separator symbols
@@ -102,10 +102,8 @@ Second session: `npm ci` was denied again by the shell (don't-ask mode). The
 browser gate is still not run. The owner must allow `npm`, `npx` and `node`,
 or run the browser gate by hand.
 
-Next agent: run the browser gate. Fix any failure. Likely risks: the new
-`#symbols-error` alert and `getByRole('alert')` strict mode in `app.spec.js`;
-the `settings input` count (now 5). Then run `git diff --check`, set
-`status: done`, record `evidence`, and commit.
+Third session: the shell allowed `npm`, `npx` and `node`. The browser gate
+ran: 47 tests passed. All other gate parts passed. The step is done.
 
 ## Limits
 
