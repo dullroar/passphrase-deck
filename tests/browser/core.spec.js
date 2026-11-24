@@ -82,10 +82,10 @@ test('both formats meet length bounds at extreme ranks', () => {
   for (const [min, max, ent] of [[12, 32, 64], [12, 48, 80]]) {
     const { count, digits, outputs, suffix } = selectPolicy(words, min, max, ent);
     for (const r of [0n, outputs - 1n, outputs / 2n]) {
-      const o = unrank(words, count, digits, r, suffix, true);
+      const o = unrank(words, count, digits, r, suffix, true, DEFAULT_SYMBOLS);
       expect(o.compact.length >= min && o.readable.length <= max).toBe(true);
     }
-    expect(() => unrank(words, count, digits, outputs, suffix)).toThrow();
+    expect(() => unrank(words, count, digits, outputs, suffix, false, DEFAULT_SYMBOLS)).toThrow();
   }
 });
 
