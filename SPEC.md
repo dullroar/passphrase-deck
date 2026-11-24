@@ -116,6 +116,31 @@ tuple conditions the output. The distinct symbols, distinct words, and
 digit alphabet make both format mappings injective. Maximum probability is
 exactly one divided by the total output count.
 
+## Secret lifecycle
+
+The page holds a secret only in script memory. The page shows it in the DOM
+only while the user reveals it. For each event below, the page drops all
+its references to the secret. It also resets the DOM to the hidden state.
+
+| Event | Result |
+| --- | --- |
+| A change to any generation setting | Clear. |
+| An invalid setting | Clear. Do not deal. |
+| A new deal | Clear the old secret first. |
+| A failed deal | Leave no secret. |
+| The tab becomes hidden (`visibilitychange`) | Clear. |
+| The page leaves (`pagehide`), or returns from the back/forward cache (`pageshow` with `persisted` true) | Clear. |
+| Copy | The page does not clear the clipboard. A copy failure keeps the secret and says so. |
+| Logs, errors and telemetry | They never hold a secret. Error text never includes one. |
+
+Dropping references is best-effort disposal. It is not secure memory
+erasure. The browser can keep copies in memory that the page cannot reach.
+
+The page has a notice near the result. The entropy bound covers the
+generated passphrase only. Choosing a result by its content, or editing it,
+lowers the strength. The page adds no storage, no clipboard timer and no
+network call for this lifecycle.
+
 Use `secrets.token_bytes()` in Python and `crypto.getRandomValues()` in
 the browser. Use unbiased rejection in both runtimes: for a uniformly drawn
 unsigned integer in a range of size R, reject values at or above
