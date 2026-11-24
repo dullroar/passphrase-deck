@@ -13,9 +13,9 @@ touches:
   - plans/review-hardening/steps/02-symbol-limit-and-reject.md
 lane: none
 gate: python3 scripts/verify_wordlist.py && python3 -m unittest discover -s tests -p 'test_*.py' && python3 scripts/check_feasibility.py && (cd tests/browser && npm ci && npx --no-install playwright install chromium && npm test) && python3 scripts/verify_release.py --self-test && python3 scripts/check_context.py && git diff --check
-claimed_by: ""
-claimed_at: ""
-evidence: "2026-11-24: the gate passed (31 Python tests, 57 browser tests, feasibility, release self-test, context check). The hyphen is safe: the four hyphenated list words do not split into list words (drop, felt, tip, t and yo are not list words). The Sardinas-Patterson test in tests/test_hyphen.py proves it. The hyphen is allowed and the limit stays 32."
+claimed_by: claude cli-default
+claimed_at: "2026-11-24T15:54:13Z"
+evidence: gate passed 2026-11-24 (driver-verified)
 ---
 
 # Settle the hyphen and the symbol limit, and stop the deal on a bad set
