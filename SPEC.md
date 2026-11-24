@@ -37,26 +37,42 @@ floor. Never silently weaken the policy.
 
 The supported schemes, in fixed priority order, are four words with six
 digits, then six words with two digits. Preflight counts the valid ordered
-word tuples for each scheme, multiplies by 10 to the digit count, and chooses
+word tuples for each scheme, multiplies by 10 to the digit count, multiplies
+by the symbol count raised to `count - 1`, and chooses
 the first scheme with at least 2 raised to the requested bit floor distinct
-outputs. This choice is deterministic. The default is minimum 12, maximum 32,
+outputs. With one symbol the counts are the same as in earlier versions. This choice is deterministic. The default is minimum 12, maximum 32,
 and 64 bits. Minimum 12, maximum 48, and 80 bits is also feasible. Do not
 claim that all other requests or all higher targets are feasible.
 
-For each selected tuple, join the lowercase words using `_ ` (underscore, space). Append the independent decimal digits directly to the
-last word. The readable value is this result. The compact value removes
-only ASCII spaces. Underscores remain between words; digits remain at the
-end. Hyphens in the list remain in the words. Thus both formats are
-reversibly split into the same ordered words and digit string.
+A symbol set is a string of 1 to 32 distinct symbols. The default is
+`.,#$_!?` in that order. Each symbol must be a printable ASCII punctuation
+character. Reject letters, digits, space, hyphen, control characters and
+non-ASCII characters. Reject a repeated symbol. A word can contain a hyphen,
+so a hyphen would make the output ambiguous. Reject the whole set on any bad
+symbol. Never drop a symbol silently. Report the failed symbol by position and
+code point. The symbol set is not a secret.
+
+For each selected tuple, put one symbol and one space after each word except
+the last. Each of the `count - 1` gaps has its own independent symbol.
+Append the independent decimal digits directly to the last word. The
+readable value is this result. The compact value removes only ASCII spaces.
+Symbols remain between words; digits remain at the end. Hyphens in the list
+remain in the words. Thus both formats are reversibly split into the same
+ordered words, gap symbols and digit string. A symbol has one character, so
+all lengths and completion counts are the same as with one symbol.
 
 Capitalization is an option. It is off by default. When it is on, change
 the first character of each word to upper case and keep all other
 characters unchanged. The word length does not change. The option adds no
 entropy and does not change the counts, the ranks, or the length checks.
 It applies to both formats in the same way. A hyphen in a word stays a
-hyphen. Underscores are fixed punctuation and add no entropy. The digit count
-is fixed by the scheme. No other capitalization or punctuation option is
-defined by this version.
+hyphen. The digit count is fixed by the scheme. The symbol set is the only
+punctuation option.
+
+Design decision (2026-11-24, owner): the symbol between words is no longer
+always an underscore. The user can edit the set of allowed symbols, because
+sites have their own odd rules. Symbols add entropy. The restrictive-site
+preset keeps its capitalization setting and does not change the set.
 
 Design decision (2026-11-23, owner): many sites require a mix of upper and
 lower case letters. A first-letter rule is easy to enter on a phone. A random
@@ -71,14 +87,18 @@ maximum. These two checks imply the other two bounds because readable is
 always at least as long as compact.
 
 Draw one uniform integer below the total output count. Divide it by
-10 raised to the digit count. The quotient is the zero-based word-tuple
-rank; the remainder is the zero-padded digit string. Decode the tuple rank
+10 raised to the digit count. The remainder is the zero-padded digit string.
+Divide the quotient by the symbol count raised to `count - 1`. The remainder
+is the symbol rank. Take it by repeated division by the symbol count, which
+gives the symbols from the last gap to the first gap. The first gap is the
+most significant symbol digit. The final quotient is the zero-based
+word-tuple rank. With one symbol the symbol rank is zero. Decode the tuple rank
 in list order. At each word position, assign each individual word a weight
 equal to the number of valid suffix tuples after that word. Select the word
 whose cumulative weight contains the rank and subtract all preceding
 weights. Repeat until all positions are filled. Each valid tuple and digit
 string has exactly one rank. No random scheme selection or rejected complete
-tuple conditions the output. The fixed separators, distinct words, and
+tuple conditions the output. The distinct symbols, distinct words, and
 digit alphabet make both format mappings injective. Maximum probability is
 exactly one divided by the total output count.
 

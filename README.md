@@ -64,8 +64,11 @@ The page does not clear the clipboard. Clear it yourself.
 
 Some sites reject spaces or need a capital letter. Use the compact format
 for sites that reject spaces. Use the restrictive-site preset to capitalize
-the first letter of each word. Every deal joins the words with an underscore
-and ends with digits. Both formats meet the length range and the entropy
+the first letter of each word. Edit the separator symbols if a site rejects
+some of them. The default set is `.,#$_!?`. Use 1 to 32 different punctuation
+symbols. Do not use letters, digits, spaces or hyphens. The CLI option is
+`--symbols`. Every deal puts one symbol from your set between each pair of
+words and ends with digits. Both formats meet the length range and the entropy
 floor of 64 bits. If a policy cannot be met, the page shows the conflict and
 a change that works. It never lowers the floor for you.
 

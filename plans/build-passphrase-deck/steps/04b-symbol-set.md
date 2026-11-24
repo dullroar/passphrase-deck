@@ -83,6 +83,24 @@ capitalization setting and does not change the set.
    Do not change the CSP rules or the `data-cfasync` attribute.
 5. Update `README.md` and `docs/release.md` if they mention the underscore.
 
+## Resume notes
+
+Done and checked (gate parts that ran): `verify_wordlist.py`, the Python unit
+tests, `check_feasibility.py`, `verify_release.py --self-test`,
+`check_context.py`.
+
+Done but NOT run: the browser part of the gate. The shell in the first session
+denied `npm`, `npx` and `node`. These files changed and need a run of
+`cd tests/browser && npm ci && npx --no-install playwright install chromium && npm test`:
+`web/core.js`, `web/app.js`, `web/index.html`, `tests/browser/app.spec.js`,
+`tests/browser/core.spec.js`, `tests/browser/single.spec.js`,
+`tests/browser/offline.spec.js`.
+
+Next agent: run the browser gate. Fix any failure. Likely risks: the new
+`#symbols-error` alert and `getByRole('alert')` strict mode in `app.spec.js`;
+the `settings input` count (now 5). Then run `git diff --check`, set
+`status: done`, record `evidence`, and commit.
+
 ## Limits
 
 Do not change the wordlist, the schemes, or the length rules. Do not deploy.

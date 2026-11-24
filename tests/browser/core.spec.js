@@ -5,8 +5,8 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
-  DIGEST, MAX_DRAWS, PolicyError, RandomLimitError, completions, digestHex,
-  parseWordlist, randBelow, selectPolicy, unrank,
+  DEFAULT_SYMBOLS, DIGEST, MAX_DRAWS, PolicyError, RandomLimitError, completions, digestHex,
+  parseWordlist, randBelow, selectPolicy, unrank, validateSymbols,
 } from '../../web/core.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -50,7 +50,7 @@ test('real wordlist ranks match Python, with and without capitalization', () => 
     '    c, d, n, s = p.select_policy(w, min_, max_, ent)',
     `    for r in ${JSON.stringify(ranks.map(String))}:`,
     '        for cap in (False, True):',
-    '            out.append(list(p._unrank(w, c, d, int(r) % n, s, cap)))',
+    '            out.append(list(p._unrank(w, c, d, int(r) % n, s, cap, p.DEFAULT_SYMBOLS)))',
     'print(json.dumps(out))',
   ].join('\n');
   const python = JSON.parse(execFileSync('python3', ['-I', '-c', code], { encoding: 'utf8' }));
@@ -59,7 +59,7 @@ test('real wordlist ranks match Python, with and without capitalization', () => 
     const { count, digits, outputs, suffix } = selectPolicy(words, min, max, ent);
     for (const r of ranks) {
       for (const cap of [false, true]) {
-        const o = unrank(words, count, digits, r % outputs, suffix, cap);
+        const o = unrank(words, count, digits, r % outputs, suffix, cap, DEFAULT_SYMBOLS);
         js.push([o.readable, o.compact]);
       }
     }
@@ -75,7 +75,7 @@ test('capitalization changes only first letters and keeps lengths', () => {
   expect(caps.readable.length).toBe(plain.readable.length);
   expect(caps.readable.toLowerCase()).toBe(plain.readable);
   expect(caps.compact).toBe(caps.readable.replaceAll(' ', ''));
-  expect(caps.readable.split('_ ').every((w) => /^[A-Z]/.test(w))).toBe(true);
+  expect(caps.readable.split(/[_] /).every((w) => /^[A-Z]/.test(w))).toBe(true);
 });
 
 test('both formats meet length bounds at extreme ranks', () => {
@@ -130,4 +130,39 @@ test('unsupported policy suggests a feasible change without lowering the floor f
   expect(error.suggestion.maximum > 14).toBe(true);
   expect(() => selectPolicy(words, 12, error.suggestion.maximum, 64)).not.toThrow();
   expect(error.message).toContain('Try a maximum length');
+});
+
+test('symbol set vectors match the Python fixture', () => {
+  const f = fixture.symbol_set;
+  const suffix = completions(f.words, f.word_count, f.digits, f.minimum, f.maximum);
+  for (const vector of f.vectors) {
+    const out = unrank(f.words, f.word_count, f.digits, BigInt(vector.rank), suffix, false, f.symbols);
+    expect(out.readable === vector.readable && out.compact === vector.compact).toBe(true);
+  }
+  const total = suffix(f.word_count, 0) * 10n ** BigInt(f.digits) * BigInt(f.symbols.length) ** 2n;
+  const seen = new Set();
+  for (let r = 0n; r < total; r += 1n) {
+    seen.add(unrank(f.words, f.word_count, f.digits, r, suffix, false, f.symbols).readable);
+  }
+  expect(seen.size).toBe(Number(total));
+});
+
+test('symbol count sets the output count', () => {
+  const one = selectPolicy(words, 12, 32, 64, '.');
+  expect(one.outputs).toBe(36742626714313000000n);
+  expect(selectPolicy(words, 12, 32, 64).outputs).toBe(36742626714313000000n * 7n ** 3n);
+});
+
+test('symbol validation accepts good sets and rejects the whole set on a bad symbol', () => {
+  for (const good of ['_', DEFAULT_SYMBOLS, '<&">\'', '!"#$%&\'()*+,./:;<=>?@[\\]^_`{|}~'.slice(0, 32)]) {
+    expect(validateSymbols(good).length).toBe(good.length);
+  }
+  for (const bad of ['', 'a', 'A', '1', ' ', '-', '.a', '..', '\t', '\u0000', 'é', '.é',
+    '%'.repeat(33), null, 5]) {
+    expect(() => validateSymbols(bad)).toThrow(PolicyError);
+    expect(() => selectPolicy(words, 12, 32, 64, bad)).toThrow(PolicyError);
+  }
+  let message = '';
+  try { validateSymbols('.a'); } catch (e) { message = e.message; }
+  expect(message).toContain('symbol 2 (U+0061)');
 });

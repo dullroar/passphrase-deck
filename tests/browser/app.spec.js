@@ -1,7 +1,7 @@
 // Browser tests. Assertions compare booleans so a failure never prints a real secret.
 import { test, expect } from '@playwright/test';
 
-const SHAPE = /^[a-z-]+(_ [a-z-]+)+\d+$/;
+const SHAPE = /^[a-z-]+([.,#$_!?] [a-z-]+)+\d+$/;
 
 async function ready(page) {
   await page.goto('/');
@@ -121,14 +121,62 @@ test('accessibility semantics expose names, states, and live regions', async ({ 
   expect(after).toContain('Hide readable');
 });
 
-test('settings expose only length, entropy, and capitalization', async ({ page }) => {
+test('settings expose length, entropy, capitalization, and symbols', async ({ page }) => {
   await ready(page);
-  await expect(page.locator('#settings input')).toHaveCount(4);
+  await expect(page.locator('#settings input')).toHaveCount(5);
   await page.getByRole('button', { name: /Restrictive-site preset/ }).click();
   await expect(page.locator('#capitalize')).toBeChecked();
+  await expect(page.locator('#symbols')).toHaveValue('.,#$_!?');
   await page.locator('#deal').click();
   const { readable } = await readSecrets(page);
-  expect(readable.split('_ ').every((w) => /^[A-Z]/.test(w))).toBe(true);
+  expect(readable.split(/[.,#$_!?] /).every((w) => /^[A-Z]/.test(w))).toBe(true);
+});
+
+test('the symbol set is used, and a single symbol repeats', async ({ page }) => {
+  await ready(page);
+  await page.getByLabel(/Separator symbols/).fill('%');
+  await page.locator('#deal').click();
+  const { readable, compact } = await readSecrets(page);
+  expect(/^[a-z-]+(% [a-z-]+)+\d+$/.test(readable)).toBe(true);
+  expect(compact === readable.replaceAll(' ', '')).toBe(true);
+});
+
+test('a bad symbol set shows an error and keeps the last good set', async ({ page }) => {
+  await ready(page);
+  await page.locator('#symbols').fill('%');
+  const field = page.locator('#symbols');
+  for (const bad of ['', 'a', '1', '-', '. ', '%%', 'é', '.'.repeat(33)]) {
+    await field.fill(bad);
+    await expect(page.locator('#symbols-error')).toBeVisible();
+    await expect(field).toHaveAttribute('aria-invalid', 'true');
+    await page.locator('#deal').click();
+    const { readable } = await readSecrets(page);
+    expect(/^[a-z-]+(% [a-z-]+)+\d+$/.test(readable)).toBe(true);
+  }
+  await field.fill('%&');
+  await expect(page.locator('#symbols-error')).toBeHidden();
+});
+
+test('the reset control restores the default symbols by keyboard', async ({ page }) => {
+  await ready(page);
+  await page.locator('#symbols').fill('%');
+  await page.locator('#symbols-reset').focus();
+  await page.keyboard.press('Enter');
+  await expect(page.locator('#symbols')).toHaveValue('.,#$_!?');
+  await expect(page.locator('#symbols-error')).toBeHidden();
+});
+
+test('markup-like symbols show as text', async ({ page }) => {
+  await ready(page);
+  for (const symbol of ['<', '&', '"', "'", '>']) {
+    await page.locator('#symbols').fill(symbol);
+    await page.locator('#deal').click();
+    const { readable } = await readSecrets(page);
+    expect(readable.includes(`${symbol} `)).toBe(true);
+    expect(await page.locator('#readable-value > *').count()).toBe(0);
+  }
+  await page.locator('#symbols').fill('<');
+  await expect(page.locator('#symbols-error')).toBeHidden();
 });
 
 test('capitalization off by default gives lowercase words', async ({ page }) => {
