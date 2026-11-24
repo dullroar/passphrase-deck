@@ -9,6 +9,8 @@ touches:
   - docs/release.md
   - README.md
   - python/**
+  - scripts/package_release.py
+  - tests/test_release.py
   - tests/test_generator.py
   - tests/fixtures/**
   - web/**
