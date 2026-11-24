@@ -78,7 +78,7 @@ entropy argument must support the recommended policy.
 - The selected default is 12–32 characters, at least 64 bits, four words,
   and six independent decimal digits. Both formats have about 64.994089
   bits of min-entropy under the specified sampler. The 12–48, 80-bit policy
-  also passed. See [the analysis](../../../../../docs/feasibility.md).
+  also passed. See [the analysis](../../../../docs/feasibility.md).
 - The requested range and wordlist are unchanged. No owner decision is
   required by this step. Review the six-digit tradeoff before coding. If
   the design changes, update the analysis and specification and rerun the

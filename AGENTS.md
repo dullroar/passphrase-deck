@@ -2,7 +2,7 @@
 
 Passphrase Deck is a static browser app and a Python reference CLI for
 generating one passphrase in two formats. Follow the security requirements
-and acceptance gates in the [implementation plan](plans/review-hardening/archive/build-passphrase-deck/plan.md).
+and acceptance gates in the [implementation plan](plans/archive/build-passphrase-deck/plan.md).
 
 This repository uses [repo-template](https://github.com/dullroar/repo-template)
 and [ralph-looper](https://github.com/dullroar/ralph-looper). Check both

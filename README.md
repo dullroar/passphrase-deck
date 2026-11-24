@@ -14,7 +14,7 @@ reference implementation. The planned web address is
 
 The release is prepared. The independent review, the real-phone checks and
 the production check are still open. See the
-[implementation plan](plans/review-hardening/archive/build-passphrase-deck/plan.md) and the
+[implementation plan](plans/archive/build-passphrase-deck/plan.md) and the
 [release guide](docs/release.md).
 
 ## Install and host
