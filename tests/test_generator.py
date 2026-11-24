@@ -103,11 +103,12 @@ class GeneratorTests(unittest.TestCase):
 
     def test_symbol_validation(self):
         good = ['_', '.,#$_!?', '<&">\'', generator.DEFAULT_SYMBOLS,
-                ''.join(sorted(generator.ALLOWED_SYMBOLS))[:32]]
+                ''.join(sorted(generator.ALLOWED_SYMBOLS)), '-', '.-']
         for symbols in good:
             self.assertEqual(len(generator.validate_symbols(symbols)), len(symbols))
-        bad = ['', 'a', 'A', '1', ' ', '-', 'a.', '..', '.,.', '\t', '\x00', 'é', '.é',
-               'x' * 33, '%' * 33, None, 5, ['.']]
+        bad = ['', 'a', 'A', '1', ' ', 'a.', '..', '.,.', '\t', '\x00', 'é', '.é',
+               'x' * 33, '%' * 33,
+               ''.join(sorted(generator.ALLOWED_SYMBOLS)) + '.', None, 5, ['.']]
         for symbols in bad:
             with self.subTest(symbols=symbols), self.assertRaises(generator.PolicyError):
                 generator.validate_symbols(symbols)
@@ -142,7 +143,7 @@ class GeneratorTests(unittest.TestCase):
         self.assertRegex(stdout.getvalue().splitlines()[0], r'^[a-z-]+(% [a-z-]+)+\d+$')
         stdout, stderr = io.StringIO(), io.StringIO()
         with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
-            result = generator.main(['--symbols', '-'])
+            result = generator.main(['--symbols', '.a'])
         self.assertEqual(result, 1)
         self.assertEqual(stdout.getvalue(), '')
         self.assertIn('SYMBOLS_INVALID', stderr.getvalue())

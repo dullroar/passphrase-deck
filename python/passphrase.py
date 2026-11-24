@@ -15,12 +15,16 @@ WORDLIST = Path(__file__).resolve().parent.parent / 'data' / 'eff_large_wordlist
 DIGEST = 'addd35536511597a02fa0a9ff1e5284677b8883b83e986e43f15a3db996b903e'
 SCHEMES = ((4, 6), (6, 2))
 DEFAULT_SYMBOLS = '.,#$_!?'
-ALLOWED_SYMBOLS = frozenset(string.punctuation) - {'-'}
+ALLOWED_SYMBOLS = frozenset(string.punctuation)
 MAX_SYMBOLS = 32
 
 
 class PolicyError(ValueError):
-    pass
+    @property
+    def code(self):
+        """Return the error code. The bounds error has no prefix in its text."""
+        head = str(self).split(':', 1)[0]
+        return head if head in ('SYMBOLS_INVALID', 'POLICY_UNSUPPORTED') else 'POLICY_INVALID'
 
 
 class RandomLimitError(RuntimeError):
@@ -89,6 +93,21 @@ def select_policy(words, minimum, maximum, entropy, symbols=DEFAULT_SYMBOLS):
     raise PolicyError('POLICY_UNSUPPORTED: increase maximum or lower entropy target')
 
 
+def preflight(words, minimum, maximum, entropy, symbols=DEFAULT_SYMBOLS):
+    """Check the settings. Read no random source. Hold no secret.
+
+    Return a dict. State "valid" has count, digits and bits (the exact whole
+    bits of the output count). The other states have code and message.
+    """
+    try:
+        count, digits, outputs, _ = select_policy(words, minimum, maximum, entropy, symbols)
+    except PolicyError as exc:
+        state = 'unsupported' if exc.code == 'POLICY_UNSUPPORTED' else 'malformed'
+        return {'state': state, 'code': exc.code, 'message': str(exc)}
+    return {'state': 'valid', 'count': count, 'digits': digits,
+            'bits': outputs.bit_length() - 1}
+
+
 def _unrank(words, count, digits, rank, suffix, capitalize=False, symbols='_'):
     symbols = validate_symbols(symbols)
     quotient, digit_rank = divmod(rank, 10 ** digits)
@@ -150,7 +169,7 @@ def main(argv=None):
     parser.add_argument('--capitalize', action='store_true',
                         help='capitalize the first letter of each word')
     parser.add_argument('--symbols', default=DEFAULT_SYMBOLS,
-                        help='separator symbols, 1 to 32 distinct punctuation characters, no hyphen')
+                        help='separator symbols, 1 to 32 distinct punctuation characters')
     parser.add_argument('--count', type=int, default=1, help='number of pairs (1–1000)')
     args = parser.parse_args(argv)
     if not 1 <= args.count <= 1000:

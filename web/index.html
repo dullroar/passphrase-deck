@@ -44,7 +44,11 @@
         </article>
       </div>
       <p class="hint">Values stay in page memory only. A reload discards them.
-        The page does not clear the clipboard.</p>
+        The page does not clear the clipboard. The page clears the values when
+        you change a setting or hide the tab.</p>
+      <p class="hint" id="choice-notice">The entropy figure covers the generated
+        passphrase only. If you pick a result by its content, or edit it, the
+        strength is lower.</p>
     </section>
 
     <form id="settings" novalidate>
@@ -66,12 +70,13 @@
         <label for="capitalize">Capitalize the first letter of each word</label>
       </p>
       <p class="field">
-        <label for="symbols">Separator symbols (1–32, no letters, digits, spaces or hyphens)</label>
+        <label for="symbols">Separator symbols (1–32 punctuation symbols, no letters, digits or spaces)</label>
         <input id="symbols" type="text" value=".,#$_!?" maxlength="64" autocomplete="off"
           autocapitalize="off" autocorrect="off" spellcheck="false" aria-describedby="symbols-error">
         <button type="button" id="symbols-reset">Reset symbols to default</button>
       </p>
       <p id="symbols-error" role="alert" class="error" hidden></p>
+      <p id="policy-status" role="status" aria-live="polite" class="hint"></p>
       <p><button type="button" id="preset">Restrictive-site preset (capitalize)</button></p>
       <p class="hint">Both formats meet the length range and the entropy floor.
         Each gap between words gets one symbol from your set. The digit count is fixed by the design.</p>

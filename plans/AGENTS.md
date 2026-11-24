@@ -19,11 +19,7 @@ Read the list. Open only the plans whose "Read me when" line matches your task.
 
 <!-- BEGIN GENERATED INDEX -->
 
-* [build-passphrase-deck/plan.md](./build-passphrase-deck/plan.md)
-  Read me when: you need to build, verify, or release the Passphrase Deck browser app and Python reference.
 * [for-each-plan/plan.md](./for-each-plan/plan.md)
   Read me when: you want to see the format of a plan. (Template only. Copy this folder to start a plan.)
-* [review-hardening/plan.md](./review-hardening/plan.md)
-  Read me when: you work on the hardening that follows the external review of Passphrase Deck (symbol limit, secret lifecycle, preflight, exhaustive tests, delivered artifact).
 
 <!-- END GENERATED INDEX -->

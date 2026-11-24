@@ -22,6 +22,29 @@ the private channel supplied with the release. Do not include a real
 passphrase or other secret in a report. The owner must provide a working
 private reporting channel before public distribution.
 
+## Delivered artifact
+
+The user trusts the page that the host delivers. A host or an edge proxy can
+change the bytes. Compare the delivered `passphrase.html` with the published
+release digest. The production verifier does this and needs the release
+manifest. See the "Delivered artifact" section of `SPEC.md`.
+
+## Secret lifecycle
+
+The page clears its references to a secret when a setting changes, when the
+tab becomes hidden, and when the page leaves or returns from the
+back/forward cache. See the "Secret lifecycle" section of `SPEC.md`. This is
+best-effort disposal. It is not secure memory erasure. The browser, the
+operating system or an extension can keep copies. The page does not clear
+the clipboard.
+
+## Choosing a result lowers strength
+
+The entropy bound covers the generated passphrase only. Do not pick a
+result by its content. Do not edit it. If you accept one deal out of N, you
+lose log2(N) bits of strength. Examples: N = 2 loses 1 bit. N = 16 loses 4
+bits. N = 1024 loses 10 bits.
+
 ## Specification review
 
 The specification addresses output collisions, length conditioning, bounded

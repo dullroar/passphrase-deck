@@ -14,7 +14,7 @@ reference implementation. The planned web address is
 
 The release is prepared. The independent review, the real-phone checks and
 the production check are still open. See the
-[implementation plan](plans/build-passphrase-deck/plan.md) and the
+[implementation plan](plans/review-hardening/archive/build-passphrase-deck/plan.md) and the
 [release guide](docs/release.md).
 
 ## Install and host
@@ -66,7 +66,7 @@ Some sites reject spaces or need a capital letter. Use the compact format
 for sites that reject spaces. Use the restrictive-site preset to capitalize
 the first letter of each word. Edit the separator symbols if a site rejects
 some of them. The default set is `.,#$_!?`. Use 1 to 32 different punctuation
-symbols. Do not use letters, digits, spaces or hyphens. The CLI option is
+symbols. Do not use letters, digits or spaces. A hyphen is allowed. The CLI option is
 `--symbols`. Every deal puts one symbol from your set between each pair of
 words and ends with digits. Both formats meet the length range and the entropy
 floor of 64 bits. If a policy cannot be met, the page shows the conflict and

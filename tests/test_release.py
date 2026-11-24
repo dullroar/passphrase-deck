@@ -1,5 +1,7 @@
 import importlib.util
 from pathlib import Path
+import subprocess
+import sys
 import unittest
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -20,6 +22,19 @@ class SingleFileTest(unittest.TestCase):
         self.assertNotIn('import', script)
         self.assertNotIn('export', script)
         self.assertIn('console.log(a, b);', script)
+
+
+class ProductionNeedsManifestTest(unittest.TestCase):
+    def test_production_refuses_to_run_without_manifest(self):
+        # The evidence file does not need to exist: the flag check comes first,
+        # and the run must make no request.
+        result = subprocess.run(
+            [sys.executable, str(ROOT / 'scripts' / 'verify_release.py'),
+             '--production', 'https://example.invalid/passphrase.html',
+             '--evidence', 'no-such-evidence.json'],
+            capture_output=True, text=True, timeout=60)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('--manifest', result.stderr)
 
 
 if __name__ == '__main__':

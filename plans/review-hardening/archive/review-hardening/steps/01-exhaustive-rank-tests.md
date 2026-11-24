@@ -1,6 +1,6 @@
 ---
 id: 01-exhaustive-rank-tests
-status: pending
+status: done
 depends_on: []
 touches:
   - tests/**
@@ -9,9 +9,9 @@ touches:
   - plans/review-hardening/steps/01-exhaustive-rank-tests.md
 lane: none
 gate: python3 scripts/verify_wordlist.py && python3 -m unittest discover -s tests -p 'test_*.py' && python3 scripts/check_feasibility.py && (cd tests/browser && npm ci && npx --no-install playwright install chromium && npm test) && python3 scripts/verify_release.py --self-test && python3 scripts/check_context.py && git diff --check
-claimed_by: ""
-claimed_at: ""
-evidence: ""
+claimed_by: claude cli-default
+claimed_at: "2026-11-24T15:50:53Z"
+evidence: gate passed 2026-11-24 (driver-verified)
 ---
 
 # Prove the rank mapping with an exhaustive test on a tiny dictionary
@@ -55,4 +55,5 @@ Set `status: done`. Fill `evidence` with the gate command, the result and the da
 
 ## Resume notes
 
-(none)
+No bug found. New files: `tests/test_exhaustive.py`, `tests/browser/exhaustive.spec.js`,
+`tests/fixtures/exhaustive.json`. To rewrite the fixture, run the Python test with `UPDATE_EXHAUSTIVE=1`.

@@ -46,10 +46,24 @@ claim that all other requests or all higher targets are feasible.
 
 A symbol set is a string of 1 to 32 distinct symbols. The default is
 `.,#$_!?` in that order. Each symbol must be a printable ASCII punctuation
-character. Reject letters, digits, space, hyphen, control characters and
-non-ASCII characters. Reject a repeated symbol. A word can contain a hyphen,
-so a hyphen would make the output ambiguous. Reject the whole set on any bad
-symbol. Never drop a symbol silently. Report the failed symbol by position and
+character. ASCII has exactly 32 punctuation characters, so the limit of 32
+equals the number of allowed characters. A set of all 32 is valid. Reject
+letters, digits, space, control characters and non-ASCII characters. Reject a
+repeated symbol. The hyphen is allowed (owner decision, 2026-11-24). A word
+can contain a hyphen, but this does not make the compact value ambiguous.
+The compact value is a concatenation of list words and one-character gap
+symbols. Any symbol that is not a letter or a hyphen splits the value
+without doubt. A hyphen symbol could be confused with a hyphen inside a word
+only if a hyphenated list word were a join of other list words, such as
+`a-b` with both `a` and `b` in the list. The four hyphenated list words are
+`drop-down`, `felt-tip`, `t-shirt` and `yo-yo`. Their parts `drop`, `felt`,
+`tip`, `t` and `yo` are not list words. So no hyphenated word splits. The
+Sardinas–Patterson test on the list words and the hyphen proves that the code
+is uniquely decodable. A permanent test runs this proof for the real list,
+also with capitalization, and checks it by brute force on small lists. The
+digits are at the end and have a fixed count, so they never join the parse.
+If a future wordlist breaks this proof, the hyphen must be banned again. Reject
+the whole set on any bad symbol. Never drop a symbol silently. Report the failed symbol by position and
 code point. The symbol set is not a secret.
 
 For each selected tuple, put one symbol and one space after each word except
@@ -101,6 +115,82 @@ string has exactly one rank. No random scheme selection or rejected complete
 tuple conditions the output. The distinct symbols, distinct words, and
 digit alphabet make both format mappings injective. Maximum probability is
 exactly one divided by the total output count.
+
+## Policy preflight
+
+The policy check is deterministic. It needs no randomness and holds no
+secret. Both runtimes expose one pure function, `preflight` in
+`web/core.js` and `python/passphrase.py`. It takes the word list and the
+settings. It calls the same validation and `selectPolicy` (`select_policy`)
+that a deal uses. It never copies their rules. It never calls the random
+source.
+
+It returns one of three states:
+
+| State | Meaning | Result fields |
+| --- | --- | --- |
+| `malformed` | A setting is not well formed. The code is `POLICY_INVALID` or `SYMBOLS_INVALID`. | `code`, `message` |
+| `unsupported` | No scheme meets the policy. The code is `POLICY_UNSUPPORTED`. | `code`, `message` |
+| `valid` | A scheme meets the policy. | `count`, `digits`, `bits` |
+
+`bits` is the exact whole number of bits of the output count (the floor of
+its base-2 logarithm). It is never below the entropy floor. The scheme order
+and the error codes do not change. Python and JavaScript must return the same
+state, code, scheme and bit count for the same settings. The shared table
+`tests/fixtures/preflight.json` tests this.
+
+The page runs the preflight when it starts and on every setting change. It
+shows the state in a polite live region (`role="status"`). The text names the
+state in words: "Policy valid", "Policy unsupported" or "Policy malformed".
+For `unsupported`, it keeps the advice to raise the maximum or lower the
+target. The Deal button is off unless the state is `valid`. A deal that
+cannot run makes no secret.
+
+## Secret lifecycle
+
+The page holds a secret only in script memory. The page shows it in the DOM
+only while the user reveals it. For each event below, the page drops all
+its references to the secret. It also resets the DOM to the hidden state.
+
+| Event | Result |
+| --- | --- |
+| A change to any generation setting | Clear. |
+| An invalid setting | Clear. Do not deal. |
+| A new deal | Clear the old secret first. |
+| A failed deal | Leave no secret. |
+| The tab becomes hidden (`visibilitychange`) | Clear. |
+| The page leaves (`pagehide`), or returns from the back/forward cache (`pageshow` with `persisted` true) | Clear. |
+| Copy | The page does not clear the clipboard. A copy failure keeps the secret and says so. |
+| Logs, errors and telemetry | They never hold a secret. Error text never includes one. |
+
+Dropping references is best-effort disposal. It is not secure memory
+erasure. The browser can keep copies in memory that the page cannot reach.
+
+The page has a notice near the result. The entropy bound covers the
+generated passphrase only. Choosing a result by its content, or editing it,
+lowers the strength. The page adds no storage, no clipboard timer and no
+network call for this lifecycle.
+
+## Delivered artifact
+
+The user trusts the page that the host delivers, not the repository. A host
+or an edge proxy can change the bytes. The delivered page `passphrase.html`
+must meet all of these rules:
+
+1. It has no external executable resource. It loads no script, style,
+   frame or object from another origin or another file.
+2. The application makes no network request.
+3. It has no analytics and no telemetry.
+4. It has a restrictive CSP. The CSP allows only the hashed inline script and
+   the hashed inline style. It has no `unsafe-inline`, no `unsafe-eval` and
+   no `'self'`.
+5. It works offline.
+6. It matches a published release digest byte for byte.
+
+The production verifier (`scripts/verify_release.py --production`) checks the
+hosted bytes against the release manifest. It needs `--manifest`. It refuses
+to run without it. See `docs/release.md` for the map from each rule to a
+check.
 
 Use `secrets.token_bytes()` in Python and `crypto.getRandomValues()` in
 the browser. Use unbiased rejection in both runtimes: for a uniformly drawn

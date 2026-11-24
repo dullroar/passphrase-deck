@@ -6,7 +6,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   DEFAULT_SYMBOLS, DIGEST, MAX_DRAWS, PolicyError, RandomLimitError, completions, digestHex,
-  parseWordlist, randBelow, selectPolicy, unrank, validateSymbols,
+  MAX_SYMBOLS, parseWordlist, preflight, randBelow, selectPolicy, unrank, validateSymbols,
 } from '../../web/core.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -154,10 +154,12 @@ test('symbol count sets the output count', () => {
 });
 
 test('symbol validation accepts good sets and rejects the whole set on a bad symbol', () => {
-  for (const good of ['_', DEFAULT_SYMBOLS, '<&">\'', '!"#$%&\'()*+,./:;<=>?@[\\]^_`{|}~'.slice(0, 32)]) {
+  for (const good of ['_', DEFAULT_SYMBOLS, '<&">\'', '!"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~', '-', '.-']) {
     expect(validateSymbols(good).length).toBe(good.length);
   }
-  for (const bad of ['', 'a', 'A', '1', ' ', '-', '.a', '..', '\t', '\u0000', 'é', '.é',
+  expect(validateSymbols('!"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~').length).toBe(MAX_SYMBOLS);
+  expect(MAX_SYMBOLS).toBe(32);
+  for (const bad of ['', 'a', 'A', '1', ' ', '.a', '..', '!"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~.', '\t', '\u0000', 'é', '.é',
     '%'.repeat(33), null, 5]) {
     expect(() => validateSymbols(bad)).toThrow(PolicyError);
     expect(() => selectPolicy(words, 12, 32, 64, bad)).toThrow(PolicyError);
@@ -165,4 +167,35 @@ test('symbol validation accepts good sets and rejects the whole set on a bad sym
   let message = '';
   try { validateSymbols('.a'); } catch (e) { message = e.message; }
   expect(message).toContain('symbol 2 (U+0061)');
+});
+
+// Preflight. It shares a table with tests/test_preflight.py, so both match.
+const preflightCases = JSON.parse(readFileSync(path.join(repo, 'tests/fixtures/preflight.json'), 'utf8'));
+
+test('preflight matches the shared table, so it matches Python', () => {
+  const states = new Set();
+  for (const { settings, expect: want } of preflightCases) {
+    const got = preflight(words, settings);
+    expect(typeof got.message === 'string' || got.state === 'valid').toBe(true);
+    delete got.message;
+    expect(got).toEqual(want);
+    states.add(got.state);
+  }
+  expect([...states].sort()).toEqual(['malformed', 'unsupported', 'valid']);
+});
+
+test('preflight does not call the random source', () => {
+  const original = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(globalThis.crypto), 'getRandomValues');
+  let calls = 0;
+  Object.defineProperty(globalThis.crypto, 'getRandomValues', {
+    configurable: true,
+    value: () => { calls += 1; throw new Error('random source called'); },
+  });
+  try {
+    for (const { settings } of preflightCases) preflight(words, settings);
+  } finally {
+    delete globalThis.crypto.getRandomValues;
+  }
+  expect(original !== undefined).toBe(true);
+  expect(calls).toBe(0);
 });

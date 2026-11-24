@@ -104,7 +104,8 @@ test('accessibility semantics expose names, states, and live regions', async ({ 
   await ready(page);
   await expect(page.getByRole('button', { name: 'Reveal readable' })).toHaveAttribute('aria-pressed', 'false');
   await expect(page.getByRole('button', { name: 'Copy compact' })).toBeEnabled();
-  await expect(page.getByRole('status')).toHaveCount(1);
+  await expect(page.getByRole('status')).toHaveCount(2);
+  await expect(page.locator('#policy-status')).toHaveAttribute('aria-live', 'polite');
   await expect(page.locator('#error')).toHaveAttribute('role', 'alert');
   for (const label of ['Minimum length (1–128)', 'Maximum length (1–128)',
     'Minimum entropy in bits (64–128)', 'Capitalize the first letter of each word']) {
@@ -141,20 +142,42 @@ test('the symbol set is used, and a single symbol repeats', async ({ page }) => 
   expect(compact === readable.replaceAll(' ', '')).toBe(true);
 });
 
-test('a bad symbol set shows an error and keeps the last good set', async ({ page }) => {
+test('a bad symbol set stops the deal and shows no passphrase', async ({ page }) => {
   await ready(page);
-  await page.locator('#symbols').fill('%');
   const field = page.locator('#symbols');
-  for (const bad of ['', 'a', '1', '-', '. ', '%%', 'é', '.'.repeat(33)]) {
+  await field.fill('%');
+  await page.locator('#deal').click();
+  const first = await readSecrets(page);
+  expect(/^[a-z-]+(% [a-z-]+)+\d+$/.test(first.readable)).toBe(true);
+  for (const bad of ['', 'a', '1', '. ', '%%', 'é', '.'.repeat(33)]) {
     await field.fill(bad);
     await expect(page.locator('#symbols-error')).toBeVisible();
+    await expect(page.locator('#symbols-error')).not.toContainText('last good');
     await expect(field).toHaveAttribute('aria-invalid', 'true');
-    await page.locator('#deal').click();
-    const { readable } = await readSecrets(page);
-    expect(/^[a-z-]+(% [a-z-]+)+\d+$/.test(readable)).toBe(true);
+    await expect(page.locator('#deal')).toBeDisabled();
+    await expect(page.locator('#symbols-error')).toBeVisible();
+    const state = await page.evaluate(() => document.body.innerText);
+    expect(state.includes(first.readable)).toBe(false);
+    expect(state.includes(first.compact)).toBe(false);
+    await expect(page.locator('#readable-reveal')).toBeDisabled();
+    await expect(page.locator('#compact-reveal')).toBeDisabled();
+    await expect(page.locator('#readable-value')).toHaveText('Hidden');
   }
   await field.fill('%&');
   await expect(page.locator('#symbols-error')).toBeHidden();
+  await page.locator('#deal').click();
+  const { readable } = await readSecrets(page);
+  expect(/^[a-z-]+([%&] [a-z-]+)+\d+$/.test(readable)).toBe(true);
+});
+
+test('a hyphen is an allowed separator symbol', async ({ page }) => {
+  await ready(page);
+  await page.locator('#symbols').fill('-');
+  await expect(page.locator('#symbols-error')).toBeHidden();
+  await page.locator('#deal').click();
+  const { readable, compact } = await readSecrets(page);
+  expect(/^[a-z-]+(- [a-z-]+)+\d+$/.test(readable)).toBe(true);
+  expect(compact === readable.replaceAll(' ', '')).toBe(true);
 });
 
 test('the reset control restores the default symbols by keyboard', async ({ page }) => {
@@ -188,9 +211,8 @@ test('capitalization off by default gives lowercase words', async ({ page }) => 
 test('an infeasible policy shows a suggestion and no secret', async ({ page }) => {
   await ready(page);
   await page.locator('#maximum').fill('14');
-  await page.locator('#deal').click();
-  const alert = page.getByRole('alert');
-  await expect(alert).toContainText('Try a maximum length');
+  await expect(page.locator('#deal')).toBeDisabled();
+  await expect(page.locator('#policy-status')).toContainText('Try a maximum length');
   await expect(page.locator('#readable-value')).toHaveText('Hidden');
   await expect(page.locator('#readable-reveal')).toBeDisabled();
   await expect(page.locator('#compact-copy')).toBeDisabled();
@@ -199,13 +221,13 @@ test('an infeasible policy shows a suggestion and no secret', async ({ page }) =
 test('invalid input shows an error and keeps the floor', async ({ page }) => {
   await ready(page);
   await page.locator('#entropy').fill('40');
-  await page.locator('#deal').click();
-  await expect(page.getByRole('alert')).toContainText('entropy from 64 to 128');
+  await expect(page.locator('#deal')).toBeDisabled();
+  await expect(page.locator('#policy-status')).toContainText('entropy from 64 to 128');
   await page.locator('#entropy').fill('64');
   await page.locator('#minimum').fill('30');
   await page.locator('#maximum').fill('20');
-  await page.locator('#deal').click();
-  await expect(page.getByRole('alert')).toBeVisible();
+  await expect(page.locator('#deal')).toBeDisabled();
+  await expect(page.locator('#policy-status')).toContainText('Policy malformed');
   await page.locator('#minimum').fill('12');
   await page.locator('#maximum').fill('48');
   await page.locator('#entropy').fill('80');

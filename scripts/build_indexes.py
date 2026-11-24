@@ -59,7 +59,7 @@ def entries(folder: Path, errors: list[str]) -> list[tuple[str, str]]:
             if (d / "plan.md").exists():
                 if g := md_gist(d / "plan.md", errors):
                     out.append((f"{d.name}/plan.md", g))
-            else:
+            elif {c.name for c in d.iterdir()} != PLAN_SKIP:  # a fully archived plan holds only archive/
                 errors.append(f"{d}: plan folder has no plan.md")
     elif kind == "scripts":
         for p in sorted(folder.iterdir()):

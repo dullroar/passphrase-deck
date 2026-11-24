@@ -6,7 +6,7 @@ export const SCHEMES = [[4, 6], [6, 2]];
 export const MAX_DRAWS = 128;
 export const DEFAULT_SYMBOLS = '.,#$_!?';
 export const MAX_SYMBOLS = 32;
-const ALLOWED_SYMBOLS = new Set('!"#$%&\'()*+,./:;<=>?@[\\]^_`{|}~');
+const ALLOWED_SYMBOLS = new Set('!"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~');
 
 export class PolicyError extends Error {
   constructor(code, message, suggestion = null) {
@@ -38,7 +38,7 @@ export function validateSymbols(symbols) {
     const name = `symbol ${index + 1} (U+${hex})`;
     if (!ALLOWED_SYMBOLS.has(char)) {
       throw new PolicyError('SYMBOLS_INVALID',
-        `The ${name} is not allowed. Use ASCII punctuation. Do not use letters, digits, spaces or hyphens.`);
+        `The ${name} is not allowed. Use ASCII punctuation. Do not use letters, digits or spaces.`);
     }
     if (seen.has(char)) throw new PolicyError('SYMBOLS_INVALID', `The ${name} is repeated.`);
     seen.add(char);
@@ -136,6 +136,23 @@ export function selectPolicy(words, minimum, maximum, entropy, symbols = DEFAULT
   throw new PolicyError('POLICY_UNSUPPORTED',
     `No supported scheme meets this policy. ${hint} The entropy floor is never lowered for you.`,
     suggestion);
+}
+
+// Preflight. A pure check of the settings. It reads no random source and holds
+// no secret. It reuses selectPolicy, so it cannot differ from a real deal.
+// State "malformed": the settings are not well formed (POLICY_INVALID or
+// SYMBOLS_INVALID). State "unsupported": no scheme meets the policy
+// (POLICY_UNSUPPORTED). State "valid": it gives the scheme and the exact
+// number of whole bits of the output count (the floor of log2).
+export function preflight(words, { minimum, maximum, entropy, symbols = DEFAULT_SYMBOLS } = {}) {
+  try {
+    const { count, digits, outputs } = selectPolicy(words, minimum, maximum, entropy, symbols);
+    return { state: 'valid', count, digits, bits: outputs.toString(2).length - 1 };
+  } catch (error) {
+    if (!(error instanceof PolicyError)) throw error;
+    const state = error.code === 'POLICY_UNSUPPORTED' ? 'unsupported' : 'malformed';
+    return { state, code: error.code, message: error.message };
+  }
 }
 
 export function unrank(words, count, digits, rank, suffix, capitalize = false, symbols = '_') {
