@@ -19,16 +19,19 @@ the production check are still open. See the
 
 ## Install and host
 
-The site is four static files. It has no server code and no runtime
-dependency. Build them, then upload the `site/` folder to any static host:
+The app is one self-contained file, `passphrase.html`. It has no server
+code, no runtime dependency and no other file. Build it, then copy the one
+file to the root of the site:
 
 ```sh
 python3 scripts/package_release.py --out "$RALPH_WORK/release"
 python3 scripts/verify_release.py --verify "$RALPH_WORK/release"
 ```
 
-Serve it over HTTPS with the headers in the [release guide](docs/release.md).
-The build output stays outside Git.
+The page is then at `https://dullroar.com/passphrase.html`. Do not link to
+it from an index page. Serve it over HTTPS with the headers in the
+[release guide](docs/release.md). The file has its own meta CSP, so a host
+header CSP is optional. The build output stays outside Git.
 
 ## Phone use
 
@@ -36,7 +39,7 @@ The build output stays outside Git.
 - **Home screen:** on iOS Safari use Share, then Add to Home Screen. On
   Android Chrome use the menu, then Add to Home screen. This makes a
   shortcut to the page. The page has no service worker.
-- **Offline:** unpack the offline zip on the phone and open `index.html`.
+- **Offline:** unpack the offline zip on the phone and open `passphrase.html`.
   Some phone browsers do not open local files. The real-device checklist
   records what each phone does.
 
@@ -45,7 +48,7 @@ The build output stays outside Git.
 1. Compare the zip's SHA-256 sum with the published `SHA256SUMS`.
 2. Unpack it and run
    `python3 scripts/verify_release.py --check-folder DIR --manifest release-manifest.json`.
-3. Open `index.html`. The page works with the network off.
+3. Open `passphrase.html`. The page works with the network off.
 
 ## Password-manager workflow
 

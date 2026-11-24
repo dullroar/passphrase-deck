@@ -29,6 +29,7 @@ import zipfile
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import package_release  # noqa: E402
+import verify_wordlist  # noqa: E402
 
 REVISION = re.compile(r'[0-9a-f]{40}')
 DIGEST = re.compile(r'[0-9a-f]{64}')
@@ -59,22 +60,37 @@ def parse_csp(text):
     return policy
 
 
-def check_csp(text, header=False):
-    """Check a policy. The header form also needs frame-ancestors."""
+HASH_SOURCE = re.compile(r"'sha256-[A-Za-z0-9+/]{43}='")
+
+
+def csp_hash(text):
+    return package_release.csp_hash(text)
+
+
+def check_csp(text, header=False, hashes=None):
+    """Check a policy. The header form also needs frame-ancestors.
+
+    For a single file, hashes is {'script-src': [source], 'style-src': [source]}.
+    The policy must then allow exactly those hash sources and no 'self'.
+    """
     problems = []
     policy = parse_csp(text)
-    required = dict(REQUIRED_CSP)
+    required = {name: [value] for name, value in REQUIRED_CSP.items()}
+    if hashes is not None:
+        required.update({name: sorted(set(values)) for name, values in hashes.items()})
     if header:
-        required.update(HEADER_ONLY_CSP)
+        required.update({name: [value] for name, value in HEADER_ONLY_CSP.items()})
     for name, value in required.items():
-        if policy.get(name) != [value]:
-            problems.append(f'CSP needs {name} {value}')
+        if sorted(policy.get(name, [])) != value or len(policy.get(name, [])) != len(value):
+            problems.append(f'CSP needs {name} {" ".join(value)}')
     for name in NONE_IF_PRESENT:
         if name in policy and policy[name] != ["'none'"]:
             problems.append(f'CSP {name} must be none')
     for name, sources in policy.items():
-        if any(source not in SAFE_SOURCES for source in sources):
-            problems.append(f'CSP {name} allows more than self or none')
+        for source in sources:
+            allowed = source in SAFE_SOURCES or (hashes is not None and HASH_SOURCE.fullmatch(source))
+            if not allowed:
+                problems.append(f'CSP {name} allows more than self or none: {source[:20]}')
     return problems
 
 
@@ -86,12 +102,19 @@ def is_local(url):
 class PageScan(HTMLParser):
     """Collect unsafe markup. Navigation links may point outside."""
 
-    def __init__(self):
+    def __init__(self, inline=False):
         super().__init__()
+        self.inline = inline
         self.problems = []
         self.csp = []
         self.refs = []
+        self.blocks = {'script': [], 'style': []}
         self._script = None
+        self._open = None
+
+    def handle_data(self, data):
+        if self._open is not None:
+            self._open.append(data)
 
     def handle_starttag(self, tag, attrs):
         attrs = {name: value or '' for name, value in attrs}
@@ -101,12 +124,19 @@ class PageScan(HTMLParser):
         if 'style' in attrs:
             self.problems.append(f'inline style on <{tag}>')
         if tag == 'style':
-            self.problems.append('inline <style> element')
+            if self.inline:
+                self._open = []
+                self.blocks['style'].append(self._open)
+            else:
+                self.problems.append('inline <style> element')
         if tag in ('iframe', 'frame', 'object', 'embed', 'base'):
             self.problems.append(f'<{tag}> element')
         if tag == 'script':
             self._script = attrs.get('src')
-            if self._script is None:
+            if self._script is None and self.inline:
+                self._open = []
+                self.blocks['script'].append(self._open)
+            elif self._script is None:
                 self.problems.append('inline <script> element')
             elif not is_local(self._script):
                 self.problems.append(f'external script {self._script}')
@@ -131,8 +161,14 @@ class PageScan(HTMLParser):
             self.csp.append(attrs.get('content', ''))
 
     def handle_endtag(self, tag):
+        if tag in ('script', 'style'):
+            self._open = None
         if tag == 'script':
             self._script = None
+
+    def inline_text(self, kind):
+        """Return the exact text of each inline block of one kind."""
+        return [''.join(parts) for parts in self.blocks[kind]]
 
 
 JS_BANNED = [
@@ -201,6 +237,50 @@ def check_site(files):
     return problems
 
 
+def scan_single(data):
+    """Parse passphrase.html. Return (scan, hashes). hashes may be None."""
+    scan = PageScan(inline=True)
+    scan.feed(data.decode('utf-8'))
+    scan.close()
+    scripts, styles = scan.inline_text('script'), scan.inline_text('style')
+    hashes = None
+    if len(scripts) == 1 and len(styles) == 1:
+        hashes = {'script-src': [csp_hash(scripts[0])], 'style-src': [csp_hash(styles[0])]}
+    return scan, hashes
+
+
+def check_single(data):
+    """Check the bytes of passphrase.html. Return a list of problems."""
+    scan, hashes = scan_single(data)
+    problems = list(scan.problems)
+    scripts, styles = scan.inline_text('script'), scan.inline_text('style')
+    if len(scripts) != 1:
+        problems.append(f'passphrase.html needs exactly one inline script, found {len(scripts)}')
+    if len(styles) != 1:
+        problems.append(f'passphrase.html needs exactly one inline style, found {len(styles)}')
+    if scan.refs:
+        problems.append('passphrase.html loads another file: ' + ', '.join(scan.refs))
+    if len(scan.csp) != 1:
+        problems.append('passphrase.html needs exactly one CSP meta element')
+    for text in scan.csp:
+        if hashes is None:
+            problems += [f'meta {p}' for p in check_csp(text)]
+        else:
+            problems += [f'meta {p}' for p in check_csp(text, hashes=hashes)]
+    for text in scripts:
+        problems += check_js('inline script', text)
+        match = re.search(r'^globalThis\.PASSPHRASE_DECK_WORDLIST = (".*");$', text, flags=re.MULTILINE)
+        try:
+            words = json.loads(match.group(1)) if match else None
+        except ValueError:
+            words = None
+        if not isinstance(words, str) or sha256(words.encode('utf-8')) != verify_wordlist.SHA256:
+            problems.append('inline script: the wordlist hash changed or the wordlist is missing')
+    for text in styles:
+        problems += check_css('inline style', text)
+    return problems
+
+
 # ----------------------------------------------------------- build verification
 
 def read_tree(folder):
@@ -246,6 +326,8 @@ def verify_build(out):
             problems.append(f'checksum mismatch: {name}')
     expected = {f'site/{n}': d for n, d in manifest.get('assets', {}).items()}
     expected.update(manifest.get('artifacts', {}))
+    single = manifest.get('single_file', {})
+    expected.update(single)
     expected['release-manifest.json'] = sha256((out / 'release-manifest.json').read_bytes())
     if listed != expected:
         problems.append('SHA256SUMS does not match the manifest')
@@ -265,15 +347,25 @@ def verify_build(out):
                        if n.startswith(prefix + '/')}
             if 'OFFLINE-USAGE.txt' not in entries:
                 problems.append('offline zip has no usage file')
+        # The static zip holds the site files. The offline zip holds the one file.
+        wanted = single if kind == 'offline' else manifest.get('assets', {})
         problems += [f'{path.name}: {p}' for p in
-                     check_assets_against(entries, manifest.get('assets', {}),
-                                          ignore=('OFFLINE-USAGE.txt',))]
+                     check_assets_against(entries, wanted, ignore=('OFFLINE-USAGE.txt',))]
     problems += check_site(site)
+    try:
+        problems += check_single((out / 'passphrase.html').read_bytes())
+    except OSError:
+        problems.append('passphrase.html is missing')
     return problems
 
 
 def check_folder(folder, manifest):
+    """Check an unpacked offline folder or a site folder against a manifest."""
     files = read_tree(folder)
+    if 'passphrase.html' in files:
+        problems = check_assets_against(files, manifest.get('single_file', {}),
+                                        ignore=('OFFLINE-USAGE.txt',))
+        return problems + check_single(files['passphrase.html'])
     problems = check_assets_against(files, manifest['assets'], ignore=('OFFLINE-USAGE.txt',))
     files.pop('OFFLINE-USAGE.txt', None)
     return problems + check_site(files)
@@ -281,9 +373,14 @@ def check_folder(folder, manifest):
 
 # --------------------------------------------------------- production verification
 
-def check_headers(name, headers):
-    """Check the response headers of one hosted file. Keys are lower case."""
+def check_headers(name, headers, hashes=None):
+    """Check the response headers of one hosted file. Keys are lower case.
+
+    The single file has a meta CSP. A header CSP is optional for it. If the
+    host sends one, it must be as strict and must allow the same hashes.
+    """
     problems = []
+    page = name in ('index.html', 'passphrase.html')
     hsts = headers.get('strict-transport-security', '')
     match = re.search(r'max-age=(\d+)', hsts)
     if not match or int(match.group(1)) < HSTS_MIN:
@@ -298,8 +395,10 @@ def check_headers(name, headers):
             problems.append(f'{name}: Content-Security-Policy header is missing')
         else:
             problems += [f'{name}: header {p}' for p in check_csp(csp, header=True)]
+    elif name == 'passphrase.html' and csp:
+        problems += [f'{name}: header {p}' for p in check_csp(csp, header=True, hashes=hashes)]
     cache = headers.get('cache-control', '').lower()
-    if name == 'index.html':
+    if page:
         if not re.search(r'no-cache|no-store|max-age=0', cache):
             problems.append(f'{name}: Cache-Control must force revalidation')
     else:
@@ -307,7 +406,7 @@ def check_headers(name, headers):
         if 'immutable' not in cache or not age or int(age.group(1)) < IMMUTABLE_MIN:
             problems.append(f'{name}: Cache-Control must be long and immutable')
     kind = headers.get('content-type', '').lower()
-    expected = ('text/html' if name == 'index.html' else
+    expected = ('text/html' if page else
                 'javascript' if name.endswith('.js') else 'text/css')
     if expected not in kind:
         problems.append(f'{name}: Content-Type must be {expected}')
@@ -346,9 +445,9 @@ def check_evidence(evidence, today=None):
         problems.append('candidate.manifest_sha256 is missing')
     need_text('candidate', candidate, 'version')
     assets = candidate.get('assets')
-    if not isinstance(assets, dict) or 'index.html' not in assets or \
+    if not isinstance(assets, dict) or list(assets) != ['passphrase.html'] or \
             not all(isinstance(d, str) and DIGEST.fullmatch(d) for d in assets.values()):
-        problems.append('candidate.assets must map files to SHA-256 sums and list index.html')
+        problems.append('candidate.assets must map passphrase.html to its SHA-256 sum')
 
     review = section('review')
     if review.get('candidate_revision') != revision:
@@ -406,37 +505,36 @@ def default_fetch(url):
 def verify_production(url, evidence, manifest=None, fetch=default_fetch, today=None):
     """Compare the hosted files with the reviewed candidate. Return problems."""
     parsed = urlparse(url)
-    if parsed.scheme != 'https' or not parsed.netloc or not url.endswith('/'):
-        return ['the production URL must be https and end with a slash']
+    if parsed.scheme != 'https' or not parsed.netloc or parsed.query or parsed.fragment \
+            or not parsed.path.endswith('/passphrase.html'):
+        return ['the production URL must be https and end with /passphrase.html']
     problems = check_evidence(evidence, today)
     candidate = evidence.get('candidate', {}) if isinstance(evidence, dict) else {}
     expected = candidate.get('assets') if isinstance(candidate.get('assets'), dict) else {}
     if manifest is not None:
-        if manifest.get('assets') != expected:
-            problems.append('the manifest assets differ from the candidate evidence')
-        expected = manifest.get('assets', {})
+        if manifest.get('single_file') != expected:
+            problems.append('the manifest single file differs from the candidate evidence')
+        expected = manifest.get('single_file', {})
     deployed = evidence.get('deployment', {}) if isinstance(evidence, dict) else {}
     if isinstance(deployed, dict) and deployed.get('url') not in (None, url):
         problems.append('deployment.url differs from the verified URL')
-    if not expected:
-        return problems + ['no reviewed asset list to compare']
-    fetched = {}
-    for name in sorted(expected):
-        target = url + ('' if name == 'index.html' else name)
-        try:
-            status, headers, body, final = fetch(target)
-        except (OSError, ssl.SSLError, ValueError) as error:
-            problems.append(f'{name}: request failed: {type(error).__name__}')
-            continue
-        if status != 200 or not final.startswith(url):
-            problems.append(f'{name}: status {status} or redirect away from the site')
-            continue
-        problems += check_headers(name, headers)
-        if sha256(body) != expected[name]:
-            problems.append(f'{name}: hosted bytes differ from the reviewed release')
-        fetched[name] = body
-    if len(fetched) == len(expected):
-        problems += [f'hosted {p}' for p in check_site(fetched)]
+    if list(expected) != ['passphrase.html']:
+        return problems + ['no reviewed passphrase.html sum to compare']
+    name = 'passphrase.html'
+    try:
+        status, headers, body, final = fetch(url)
+    except (OSError, ssl.SSLError, ValueError) as error:
+        return problems + [f'{name}: request failed: {type(error).__name__}']
+    if status != 200 or final != url:
+        return problems + [f'{name}: status {status} or redirect away from the URL']
+    try:
+        _, hashes = scan_single(body)
+    except ValueError:
+        return problems + [f'{name}: hosted bytes are not valid UTF-8 text']
+    problems += check_headers(name, headers, hashes)
+    if sha256(body) != expected[name]:
+        problems.append(f'{name}: hosted bytes differ from the reviewed release')
+    problems += [f'hosted {p}' for p in check_single(body)]
     return problems
 
 
@@ -448,13 +546,15 @@ def good_headers(name):
         'referrer-policy': 'no-referrer',
         'x-content-type-options': 'nosniff',
     }
-    if name == 'index.html':
+    if name in ('index.html', 'passphrase.html'):
         base.update({
             'content-type': 'text/html; charset=utf-8',
             'cache-control': 'no-cache',
-            'content-security-policy': "default-src 'none'; script-src 'self'; style-src 'self'; "
-                                       "base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
         })
+        if name == 'index.html':
+            base['content-security-policy'] = (
+                "default-src 'none'; script-src 'self'; style-src 'self'; "
+                "base-uri 'none'; form-action 'none'; frame-ancestors 'none'")
     else:
         base.update({
             'content-type': 'text/css' if name.endswith('.css') else 'text/javascript',
@@ -478,11 +578,23 @@ def self_test():
         second = package_release.build(Path(two) / 'b')
         expect('manifests match', first == second)
         tree_a, tree_b = read_tree(Path(one) / 'a'), read_tree(Path(two) / 'b')
-        expect('output bytes match', tree_a == tree_b and len(tree_a) == 8)
+        expect('output bytes match', tree_a == tree_b and len(tree_a) == 9)
         build_a = Path(one) / 'a'
         expect('build verifies', verify_build(build_a) == [])
         expect('site passes static checks', check_site(read_tree(build_a / 'site')) == [])
         expect('folder check passes', check_folder(build_a / 'site', first) == [])
+        single_bytes = (build_a / 'passphrase.html').read_bytes()
+        expect('single file passes static checks', check_single(single_bytes) == [])
+        with tempfile.TemporaryDirectory() as unpacked:
+            prefix = f'{first["name"]}-{first["version"]}'
+            with zipfile.ZipFile(next(build_a.glob('*-offline.zip'))) as archive:
+                for entry in archive.namelist():
+                    (Path(unpacked) / entry.split('/', 1)[1]).write_bytes(archive.read(entry))
+            expect('offline folder passes', check_folder(unpacked, first) == [])
+            expect('offline zip holds the one file',
+                   sorted(p.name for p in Path(unpacked).iterdir()) == ['OFFLINE-USAGE.txt', 'passphrase.html'])
+            (Path(unpacked) / 'passphrase.html').write_bytes(single_bytes + b' ')
+            expect('offline folder change found', check_folder(unpacked, first) != [])
         try:
             package_release.build(package_release.ROOT / 'build-test-output')
             expect('refuses output inside the repository', False)
@@ -490,7 +602,7 @@ def self_test():
             pass
 
         # A changed asset must be found in the site, a zip, and the sums.
-        for victim in sorted((build_a / 'site').iterdir()):
+        for victim in sorted((build_a / 'site').iterdir()) + [build_a / 'passphrase.html']:
             original = victim.read_bytes()
             victim.write_bytes(original + b' ')
             expect(f'changed asset found: {victim.name}', has(verify_build(build_a), 'mismatch'))
@@ -537,8 +649,51 @@ def self_test():
         changed[css] = site[css] + b'\n@import url("https://example.com/a.css");'
         expect('css import found', has(check_site(changed), 'css'))
 
+        # Single-file check cases. Each bad input must be found.
+        page = single_bytes.decode('utf-8')
+
+        def single_mutated(old, new, fix=False):
+            changed = page.replace(old, new, 1)
+            if fix:  # make the CSP hashes match the new blocks, to test the other checks
+                scan, hashes = scan_single(changed.encode('utf-8'))
+                csp = scan.csp[0]
+                new_csp = re.sub(r"script-src [^;]*", 'script-src ' + hashes['script-src'][0], csp)
+                new_csp = re.sub(r"style-src [^;]*", 'style-src ' + hashes['style-src'][0], new_csp)
+                changed = changed.replace(csp, new_csp, 1)
+            return check_single(changed.encode('utf-8'))
+
+        expect('single: injected inline script found',
+               has(single_mutated('</body>', '<script>alert(1)</script></body>'), 'inline script'))
+        expect('single: injected inline style found',
+               has(single_mutated('</head>', '<style>a{}</style></head>'), 'inline style'))
+        expect('single: changed script found by hash',
+               has(single_mutated('use strict', 'use  strict'), 'script-src'))
+        expect('single: changed style found by hash',
+               has(single_mutated('<style>\n', '<style>\n/* x */'), 'style-src'))
+        expect('single: event handler found', has(single_mutated('<main>', '<main onclick="x()">'), 'event handler'))
+        expect('single: inline style attribute found', has(single_mutated('<main>', '<main style="a:b">'), 'inline style'))
+        expect('single: external script found',
+               has(single_mutated('</head>', '<script src="https://example.com/a.js"></script></head>'), 'external script'))
+        expect('single: local script file found',
+               has(single_mutated('</head>', '<script src="a.js"></script></head>'), 'loads another file'))
+        expect('single: external link found',
+               has(single_mutated('</head>', '<link rel="stylesheet" href="//example.com/a.css"></head>'), 'external link'))
+        expect('single: unsafe-inline found', has(single_mutated("script-src ", "script-src 'unsafe-inline' "), 'CSP'))
+        expect('single: self source found', has(single_mutated("style-src ", "style-src 'self' "), 'CSP'))
+        expect('single: connect-src found',
+               has(single_mutated("default-src 'none';", "default-src 'none'; connect-src 'self';"), 'connect-src'))
+        expect('single: missing CSP found', has(single_mutated('Content-Security-Policy', 'X-Other'), 'CSP'))
+        expect('single: iframe found', has(single_mutated('<main>', '<main><iframe></iframe>'), 'iframe'))
+        expect('single: eval found', has(single_mutated('use strict', 'use strict\'; eval("1"); \'', fix=True), 'eval'))
+        expect('single: absolute URL found',
+               has(single_mutated('use strict', 'use strict\'; var u = "https://example.com/"; \'', fix=True), 'absolute URL'))
+        expect('single: wordlist change found',
+               has(single_mutated('abacus', 'abacuz', fix=True), 'wordlist'))
+        expect('single: css import found',
+               has(single_mutated('<style>\n', '<style>\n@import url("https://example.com/a.css");', fix=True), '@import'))
+
         # Header checks.
-        for name in site:
+        for name in list(site) + ['passphrase.html']:
             expect(f'good headers pass: {name}', check_headers(name, good_headers(name)) == [])
             for key in list(good_headers(name)):
                 broken = good_headers(name)
@@ -547,6 +702,17 @@ def self_test():
         weak = good_headers('index.html')
         weak['content-security-policy'] = weak['content-security-policy'].replace("; frame-ancestors 'none'", '')
         expect('missing frame-ancestors found', check_headers('index.html', weak) != [])
+        _, page_hashes = scan_single(single_bytes)
+        with_csp = good_headers('passphrase.html')
+        with_csp['content-security-policy'] = (
+            f"default-src 'none'; script-src {page_hashes['script-src'][0]}; "
+            f"style-src {page_hashes['style-src'][0]}; base-uri 'none'; form-action 'none'; "
+            "frame-ancestors 'none'")
+        expect('header CSP with hashes passes', check_headers('passphrase.html', with_csp, page_hashes) == [])
+        with_csp['content-security-policy'] = with_csp['content-security-policy'].replace("script-src '", "script-src 'unsafe-inline' '")
+        expect('header CSP with unsafe-inline found', check_headers('passphrase.html', with_csp, page_hashes) != [])
+        with_csp['content-security-policy'] = good_headers('index.html')['content-security-policy']
+        expect('header CSP with self found', check_headers('passphrase.html', with_csp, page_hashes) != [])
 
         # Evidence checks.
         revision = 'a' * 40
@@ -560,13 +726,13 @@ def self_test():
                 'candidate_revision': revision}
             return {
                 'candidate': {'revision': revision, 'version': first['version'],
-                              'manifest_sha256': sha256(b'm'), 'assets': dict(first['assets'])},
+                              'manifest_sha256': sha256(b'm'), 'assets': dict(first['single_file'])},
                 'review': {'candidate_revision': revision, 'date': '2029-12-01',
                            'reviewer_role': 'independent reviewer', 'disposition': 'approved',
                            'unresolved_findings': 0},
                 'devices': [device(p) for p in PLATFORMS],
                 'deployment': {'deployed_revision': revision, 'authorized': True,
-                               'authorized_by_role': 'owner', 'url': 'https://example.test/p/',
+                               'authorized_by_role': 'owner', 'url': 'https://example.test/p/passphrase.html',
                                'date': '2029-12-02'},
             }
 
@@ -590,7 +756,8 @@ def self_test():
             'install note missing': lambda e: e['devices'][0].pop('install_behavior'),
             'deployed revision mismatch': lambda e: e['deployment'].update(deployed_revision='b' * 40),
             'not authorized': lambda e: e['deployment'].update(authorized=False),
-            'asset digest bad': lambda e: e['candidate']['assets'].update({'index.html': 'zz'}),
+            'asset digest bad': lambda e: e['candidate']['assets'].update({'passphrase.html': 'zz'}),
+            'extra asset listed': lambda e: e['candidate']['assets'].update({'index.html': sha256(b'x')}),
         }
         for label, change in cases.items():
             broken = make_evidence()
@@ -599,29 +766,38 @@ def self_test():
 
         # Production flow with a fake host that serves the built site.
         evidence = make_evidence()
-        evidence['deployment']['url'] = 'https://example.test/p/'
-        url = 'https://example.test/p/'
+        url = 'https://example.test/p/passphrase.html'
+        evidence['deployment']['url'] = url
+        files = {'passphrase.html': single_bytes}
 
-        def host(files=site, drop=None, final=None):
+        def host(files=files, drop=None, final=None, extra=None):
             def fetch(target):
-                name = target[len(url):] or 'index.html'
-                headers = good_headers(name)
+                headers = good_headers('passphrase.html')
+                headers.update(extra or {})
                 if drop:
                     headers.pop(drop, None)
-                if name not in files:
+                if target != url or 'passphrase.html' not in files:
                     return 404, headers, b'', target
-                return 200, headers, files[name], final or target
+                return 200, headers, files['passphrase.html'], final or target
             return fetch
 
         run = lambda **kw: verify_production(url, kw.pop('evidence', evidence), fetch=host(**kw), today=today)
+        manifest_ok = lambda: verify_production(url, evidence, first, host(), today)
         expect('production passes', run() == [])
-        expect('production http refused', verify_production('http://example.test/p/', evidence, fetch=host(), today=today) != [])
-        changed = dict(site)
-        changed[deck] = site[deck] + b'\n// changed'
+        expect('production passes with the manifest', manifest_ok() == [])
+        expect('production http refused', verify_production(
+            'http://example.test/p/passphrase.html', evidence, fetch=host(), today=today) != [])
+        expect('production slash URL refused', verify_production(
+            'https://example.test/p/', evidence, fetch=host(), today=today) != [])
+        changed = {'passphrase.html': single_bytes + b'\n<!-- changed -->'}
         expect('production byte mismatch found', has(run(files=changed), 'differ'))
+        injected = {'passphrase.html': single_bytes.replace(b'</body>', b'<script>x()</script></body>', 1)}
+        expect('production injected script found', has(run(files=injected), 'inline script'))
         expect('production header missing found', has(run(drop='strict-transport-security'), 'Strict'))
         expect('production redirect found', run(final='https://other.test/') != [])
-        expect('production missing file found', run(files={k: v for k, v in site.items() if k != deck}) != [])
+        expect('production missing file found', run(files={}) != [])
+        expect('production bad header CSP found',
+               has(run(extra={'content-security-policy': "default-src 'none'; script-src 'self'"}), 'header CSP'))
         broken = make_evidence()
         broken['devices'].pop()
         expect('production refuses missing device evidence', run(evidence=broken) != [])
