@@ -1,6 +1,6 @@
 ---
 id: 04a-single-file-release
-status: pending
+status: done
 depends_on: [04-offline-release]
 touches:
   - scripts/package_release.py
@@ -15,7 +15,7 @@ touches:
   - plans/build-passphrase-deck/steps/05-production-verification.md
 lane: none
 gate: python3 scripts/verify_wordlist.py && python3 -m unittest discover -s tests -p 'test_*.py' && (cd tests/browser && npm ci && npx --no-install playwright install chromium && npm test) && python3 scripts/verify_release.py --self-test && python3 scripts/check_context.py && git diff --check
-evidence: ""
+evidence: gate passed (wordlist, unit tests, 40 browser tests, release self-test, context checks, diff check); passphrase.html is 139899 bytes
 ---
 
 # Build one self-contained passphrase.html

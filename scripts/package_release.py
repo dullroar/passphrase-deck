@@ -8,9 +8,14 @@ layout, so it runs from a local file with no server and no network:
 
     index.html, style.<hash>.css, deck.<hash>.js, wordlist.<hash>.js
 
+It also builds one self-contained file, passphrase.html. The file holds the
+stylesheet in one <style> element. It holds the wordlist and the deck script
+in one inline <script>. A meta CSP allows each block by its SHA-256 hash.
+
 Usage: python3 scripts/package_release.py --out DIR [--version X.Y.Z]
 """
 import argparse
+import base64
 import hashlib
 import json
 from pathlib import Path
@@ -38,15 +43,16 @@ ZIP_TIME = (1980, 1, 1, 0, 0, 0)
 OFFLINE_USAGE = """Passphrase Deck offline copy
 
 1. Unpack the zip file to a folder on your device.
-2. Open index.html in a web browser. You need no server and no network.
-3. The page makes one passphrase in two formats. It never sends data.
+2. Open passphrase.html in a web browser. You need no server and no network.
+3. The file is the whole app. The page makes one passphrase in two
+   formats. It never sends data.
 4. If Copy fails, the browser blocked clipboard access for local files.
    Press Reveal, select the text, and copy it by hand.
-5. Check the files first. Compare the SHA-256 sums with SHA256SUMS from
+5. Check the file first. Compare its SHA-256 sum with SHA256SUMS from
    the release. Use: python3 scripts/verify_release.py --check-folder DIR
    --manifest release-manifest.json
 
-The page runs the code in this folder. Keep the folder read-only.
+The page runs the code in this file. Keep the file read-only.
 Word list: EFF long list, CC BY 4.0, https://www.eff.org/dice
 """
 
@@ -72,8 +78,8 @@ def classic_script(core, app):
     return "(function () {\n'use strict';\n" + core + '\n' + rest + '\n})();\n'
 
 
-def build_assets(root=ROOT):
-    """Return {name: bytes} for the site files. Raise on any mismatch."""
+def load_parts(root=ROOT):
+    """Return (text, raw, script, wordlist). Raise on a wordlist mismatch."""
     raw = {key: (root / path).read_bytes() for key, path in SOURCES.items()}
     if sha256(raw['wordlist']) != verify_wordlist.SHA256:
         raise ValueError('wordlist SHA-256 mismatch')
@@ -81,6 +87,38 @@ def build_assets(root=ROOT):
     script = classic_script(text['core'], text['app']).encode('utf-8')
     wordlist = ('globalThis.PASSPHRASE_DECK_WORDLIST = '
                 + json.dumps(text['wordlist']) + ';\n').encode('ascii')
+    return text, raw, script, wordlist
+
+
+def csp_hash(text):
+    """Return the CSP source for one inline block. The text is exact."""
+    digest = hashlib.sha256(text.encode('utf-8')).digest()
+    return "'sha256-" + base64.b64encode(digest).decode('ascii') + "'"
+
+
+def build_single(root=ROOT):
+    """Return the bytes of passphrase.html. Raise on any mismatch."""
+    text, _, script, wordlist = load_parts(root)
+    style_text = '\n' + text['style'].rstrip() + '\n'
+    script_text = '\n' + (wordlist + script).decode('utf-8')
+    if re.search(r'<!--|</?script', script_text, flags=re.IGNORECASE):
+        raise ValueError('the inline script holds markup that ends the block')
+    if re.search(r'</style|<!--', style_text, flags=re.IGNORECASE):
+        raise ValueError('the inline style holds markup that ends the block')
+    html = text['index']
+    html = _replace_once(
+        html, "script-src 'self'; style-src 'self'; connect-src 'self'; ",
+        f"script-src {csp_hash(script_text)}; style-src {csp_hash(style_text)}; ")
+    html = _replace_once(html, '<link rel="stylesheet" href="style.css">',
+                         f'<style>{style_text}</style>')
+    html = _replace_once(html, '  <script type="module" src="app.js"></script>\n', '')
+    html = _replace_once(html, '</body>', f'<script>{script_text}</script>\n</body>')
+    return html.encode('utf-8')
+
+
+def build_assets(root=ROOT):
+    """Return {name: bytes} for the site files. Raise on any mismatch."""
+    text, raw, script, wordlist = load_parts(root)
     style = raw['style']
     names = {
         'style': f'style.{sha256(style)[:12]}.css',
@@ -126,7 +164,10 @@ def build(out, version=VERSION, root=ROOT):
     for name, data in assets.items():
         (site / name).write_bytes(data)
     prefix = f'{NAME}-{version}'
-    offline = {f'{prefix}/{name}': data for name, data in assets.items()}
+    single = build_single(root)
+    (out / 'passphrase.html').write_bytes(single)
+    # The offline zip holds the one file. The static zip keeps the site files.
+    offline = {f'{prefix}/passphrase.html': single}
     offline[f'{prefix}/OFFLINE-USAGE.txt'] = OFFLINE_USAGE.encode('utf-8')
     zips = {f'{prefix}-static.zip': assets, f'{prefix}-offline.zip': offline}
     for zip_name, entries in zips.items():
@@ -135,6 +176,7 @@ def build(out, version=VERSION, root=ROOT):
         'name': NAME,
         'version': version,
         'assets': {name: sha256(data) for name, data in sorted(assets.items())},
+        'single_file': {'passphrase.html': sha256(single)},
         'artifacts': {name: sha256((out / name).read_bytes()) for name in sorted(zips)},
         'wordlist_sha256': verify_wordlist.SHA256,
     }
@@ -142,6 +184,7 @@ def build(out, version=VERSION, root=ROOT):
         json.dumps(manifest, indent=2, sort_keys=True) + '\n', encoding='utf-8')
     sums = [f'{digest}  {name}' for name, digest in manifest['artifacts'].items()]
     sums += [f'{digest}  site/{name}' for name, digest in manifest['assets'].items()]
+    sums += [f'{digest}  {name}' for name, digest in manifest['single_file'].items()]
     sums.append(f'{sha256((out / "release-manifest.json").read_bytes())}  release-manifest.json')
     (out / 'SHA256SUMS').write_text('\n'.join(sums) + '\n', encoding='utf-8')
     return manifest

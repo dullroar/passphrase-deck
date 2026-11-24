@@ -20,19 +20,44 @@ The output folder holds:
 
 | File | Purpose |
 | --- | --- |
-| `site/` | The files to host. Four files: `index.html`, one stylesheet, one script, one wordlist script. |
-| `passphrase-deck-<version>-static.zip` | The same files, for upload to a host. |
-| `passphrase-deck-<version>-offline.zip` | The same files in one folder, plus `OFFLINE-USAGE.txt`. |
+| `passphrase.html` | The production file. One self-contained page. Copy only this file to the site root. |
+| `site/` | The multi-file layout. Four files: `index.html`, one stylesheet, one script, one wordlist script. |
+| `passphrase-deck-<version>-static.zip` | The multi-file layout, as a zip. |
+| `passphrase-deck-<version>-offline.zip` | `passphrase.html` plus `OFFLINE-USAGE.txt`. |
 | `release-manifest.json` | The SHA-256 sum of each file and each archive. |
-| `SHA256SUMS` | The same sums in the common checksum format. |
+| `SHA256SUMS` | The same sums in the common checksum format. One list covers every artifact. |
 
 The build is deterministic. Two builds from the same source give the same
 bytes. `verify_release.py --self-test` proves this.
 
-The packaged layout uses classic scripts. The wordlist is a script, not a
+## The single file
+
+`passphrase.html` holds the stylesheet in one `<style>` element. It holds
+the wordlist and the deck script in one inline `<script>` at the end of the
+body. It loads no other file and makes no request.
+
+The meta CSP allows each inline block by its SHA-256 hash:
+
+```text
+default-src 'none'; script-src 'sha256-<hash>'; style-src 'sha256-<hash>'; base-uri 'none'; form-action 'none'
+```
+
+The build computes each hash from the exact block text. The policy has no
+`unsafe-inline`, no `unsafe-eval` and no `'self'`. It has no `connect-src`.
+A script or style that an attacker injects has a different hash. The
+browser blocks it. The verifier checks that the hashes match, that there is
+exactly one inline script and one inline style, that no inline event
+handler or outside origin exists, and that the embedded wordlist hash is
+unchanged.
+
+The offline zip holds the one file in place of the multi-file layout. The
+static zip keeps the multi-file layout for hosts that want it.
+
+The multi-file layout uses classic scripts. The wordlist is a script, not a
 fetched file. So the page needs no request after it loads. It opens from a
 local file in a browser. The page still checks the wordlist SHA-256 sum.
-The asset names contain a short hash. Use long caching for them.
+The multi-file asset names contain a short hash. Use long caching for them
+only if you host that layout.
 
 ## Standalone download and PWA
 
@@ -41,7 +66,7 @@ PWA: no manifest and no service worker. A service worker would add a cache
 that the host can update. The host could then replace the code on a later
 visit. The benefit is small, because the standalone download already works
 without a network. Add a PWA only if a phone test shows a real need. Then
-cache only the four site files, test the cache contents and the update path,
+cache only the one file, test the cache contents and the update path,
 and document the update risk.
 
 ## Offline use
@@ -49,13 +74,15 @@ and document the update risk.
 1. Download the offline zip. Compare its SHA-256 sum with `SHA256SUMS`.
 2. Unpack it. Check the folder:
    `python3 scripts/verify_release.py --check-folder DIR --manifest release-manifest.json`.
-3. Open `index.html` in a browser. A `file://` page is a normal page. It
+3. Open `passphrase.html` in a browser. A `file://` page is a normal page. It
    needs no server.
 4. Browsers can block clipboard access for local files. The page then says
    that copy failed. Use Reveal, select the text and copy it by hand.
 
-The automated test opens the packaged layout from a local file with the
-network off. It deals, reveals, copies and checks that no request is made.
+The automated tests open both layouts from a local file with the network
+off. They also open `passphrase.html` from a local server with every other
+request blocked. They deal, reveal, copy and check that no request is made.
+They also check that the CSP blocks an injected inline script and style.
 The browser tests use Chromium. The operator must repeat the check on real
 phones (see the checklist).
 
@@ -72,29 +99,34 @@ X-Content-Type-Options: nosniff
 Add `includeSubDomains` only after you review every subdomain. Add
 `preload` only after that review and a deliberate choice.
 
-Send this header with `index.html`:
+Send this header with `passphrase.html`:
 
 ```text
-Content-Security-Policy: default-src 'none'; script-src 'self'; style-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'
 Cache-Control: no-cache
 ```
 
-The policy denies everything by default. It allows scripts and styles from
-the same origin only. It grants no connection, object, base, form or
-frame-ancestor permission. The shipped files need no image or manifest
-allowance. Add one only if a later file needs it.
+The file has a fixed name, so the browser must revalidate it. A cached old
+copy would hide a new release.
 
-Send this header with the hashed asset files:
+A host header CSP is optional. The file has a meta CSP that already denies
+everything except its two hashed inline blocks. If you send a header CSP
+too, use the same hashes from the file and add `frame-ancestors`. A meta CSP
+cannot set `frame-ancestors`. A header can:
 
 ```text
-Cache-Control: public, max-age=31536000, immutable
+Content-Security-Policy: default-src 'none'; script-src 'sha256-<hash>'; style-src 'sha256-<hash>'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'
 ```
 
-The hash in each file name makes this safe. A new release uses new names.
+Never use `'self'`, `unsafe-inline` or `unsafe-eval`. Update the hashes for
+every release. The production verifier checks a header CSP when it is
+present.
+
+Copy the one file `passphrase.html` to the site root. Do not link to it
+from an index page. Do not copy the `site/` folder.
 
 Use a protected deployment path. Only the owner or a named delegate can
-upload. Use two-factor sign-in for the host account. Upload only files from a
-verified build. Keep an audit log outside this repository.
+upload. Use two-factor sign-in for the host account. Upload only the file
+from a verified build. Keep an audit log outside this repository.
 
 ## Dependency scanning
 
@@ -114,16 +146,18 @@ python3 scripts/verify_release.py \
 ```
 
 It fails on missing evidence, an open finding, a failed device check, a TLS
-failure, a missing header, an outside origin or a byte mismatch. It fetches
-each file in the manifest and compares its SHA-256 sum. It checks the
-headers and runs the static checks on the hosted bytes.
+failure, a missing header, an outside origin, an inline block that the
+meta CSP does not cover or a byte mismatch. It fetches `passphrase.html`
+and compares its SHA-256 sum with the manifest. It checks the headers and
+runs the single-file static checks on the hosted bytes. It does not follow
+a redirect to another URL.
 
-To test generation and copy against the hosted page, run the offline tests
-with the hosted address:
+To test generation and the CSP against the hosted page, run the server
+tests with the hosted address. All other requests stay blocked:
 
 ```sh
 cd tests/browser
-DECK_SITE_URL=https://dullroar.com/passphrase.html npx --no-install playwright test offline.spec.js
+DECK_SITE_URL=https://dullroar.com/passphrase.html npx --no-install playwright test single.spec.js -g "server"
 ```
 
 ## Evidence file
@@ -137,7 +171,7 @@ roles, not names. Never write a generated value. The file has four parts:
     "revision": "<40-character Git revision>",
     "version": "<version>",
     "manifest_sha256": "<SHA-256 of release-manifest.json>",
-    "assets": { "index.html": "<SHA-256>", "<other files>": "<SHA-256>" }
+    "assets": { "passphrase.html": "<SHA-256>" }
   },
   "review": {
     "candidate_revision": "<same revision>",
@@ -170,7 +204,7 @@ roles, not names. Never write a generated value. The file has four parts:
 ```
 
 The `devices` list needs one entry for `iOS Safari` and one for
-`Android Chrome`. The `assets` map is the `assets` map of the manifest.
+`Android Chrome`. The `assets` map is the `single_file` map of the manifest.
 
 ## Operator checklist
 
@@ -185,7 +219,8 @@ The `devices` list needs one entry for `iOS Safari` and one for
 4. Decide which source files and artifacts may be public. The repository
    license is proprietary. The wordlist is CC BY 4.0 and needs attribution.
    Publish only what you authorize.
-5. Deploy the verified files to the host. Set the headers above.
+5. Copy the verified `passphrase.html` to the site root. Set the headers
+   above. Do not link to it from an index page.
 6. Write `docs/release-evidence.json`. Run the production verifier. Start
    step 05 only when all of this is complete.
 

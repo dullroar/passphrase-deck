@@ -22,10 +22,11 @@ all results with the same candidate. Use roles or approved references for
 reviewers. Keep credentials, personal information, and generated values out
 of the record.
 
-Run the read-only production verifier prepared in step 04. It must fail
-on missing evidence, unresolved findings, failed device checks, a TLS
-failure, missing required response headers, external runtime origins, or
-an asset mismatch. Verify the actual hosted bytes against the reviewed
+Run the read-only production verifier prepared in steps 04 and 04a. It
+must fail on missing evidence, unresolved findings, failed device checks, a
+TLS failure, missing required response headers, external runtime origins,
+an inline block that the meta CSP hash does not cover, or a byte mismatch.
+Verify the actual hosted `passphrase.html` bytes against the reviewed
 release manifest and test that generation and copy issue no network
 requests after asset load. Document any platform limits and the
 verified offline path. Changes to the candidate go back through the
