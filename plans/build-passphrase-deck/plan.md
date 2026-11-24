@@ -39,7 +39,8 @@ product source distribution under the owner's control.
 | [03-static-web](steps/03-static-web.md) | Implement the responsive app and verify browser isolation and parity. | 02 |
 | [04-offline-release](steps/04-offline-release.md) | Package and verify the offline release and prepare release instructions. | 03 |
 | [04a-single-file-release](steps/04a-single-file-release.md) | Build one self-contained `passphrase.html` with hash-based CSP. | 04 |
-| [05-production-verification](steps/05-production-verification.md) | Verify the reviewed release on the production host and record acceptance evidence. | 04a and operator handoff |
+| [04b-symbol-set](steps/04b-symbol-set.md) | Let the user choose the separator symbols. | 04a |
+| [05-production-verification](steps/05-production-verification.md) | Verify the reviewed release on the production host and record acceptance evidence. | 04b and operator handoff |
 
 The steps run in order. Later steps use the accepted specification, reference
 fixtures, or release artifact from earlier steps.
