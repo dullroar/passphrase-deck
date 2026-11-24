@@ -112,7 +112,8 @@ def build_single(root=ROOT):
     html = _replace_once(html, '<link rel="stylesheet" href="style.css">',
                          f'<style>{style_text}</style>')
     html = _replace_once(html, '  <script type="module" src="app.js"></script>\n', '')
-    html = _replace_once(html, '</body>', f'<script>{script_text}</script>\n</body>')
+    # Cloudflare Rocket Loader rewrites plain inline scripts. data-cfasync keeps ours as is.
+    html = _replace_once(html, '</body>', f'<script data-cfasync="false">{script_text}</script>\n</body>')
     return html.encode('utf-8')
 
 
