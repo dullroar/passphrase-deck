@@ -48,12 +48,12 @@ test('an invalid setting clears the secret and does not deal', async ({ page }) 
   const secret = await show(page);
   await page.locator('#entropy').fill('40');
   await expectCleared(page, secret);
-  await page.locator('#deal').click();
-  await expect(page.getByRole('alert').first()).toBeVisible();
+  await expect(page.locator('#deal')).toBeDisabled();
+  await expect(page.locator('#policy-status')).toContainText('malformed');
   await expectCleared(page, secret);
   await page.locator('#entropy').fill('64');
   await page.locator('#symbols').fill('a');
-  await page.locator('#deal').click();
+  await expect(page.locator('#deal')).toBeDisabled();
   await expect(page.locator('#symbols-error')).toBeVisible();
   await expectCleared(page, secret);
 });
@@ -72,10 +72,10 @@ test('a failed deal leaves no secret', async ({ page }) => {
   await ready(page);
   const secret = await show(page);
   await page.locator('#maximum').fill('14');
-  await page.locator('#deal').click();
-  await expect(page.locator('#error')).toContainText('Try a maximum length');
+  await expect(page.locator('#deal')).toBeDisabled();
+  await expect(page.locator('#policy-status')).toContainText('Try a maximum length');
   await expectCleared(page, secret);
-  const error = await page.locator('#error').textContent();
+  const error = await page.locator('#policy-status').textContent();
   expect(error.includes(secret)).toBe(false);
 });
 
@@ -154,8 +154,8 @@ test('logs and errors never hold a secret', async ({ page }) => {
   await ready(page);
   const secret = await show(page);
   await page.locator('#maximum').fill('14');
-  await page.locator('#deal').click();
-  const error = await page.locator('#error').textContent();
+  await expect(page.locator('#deal')).toBeDisabled();
+  const error = await page.locator('#policy-status').textContent();
   expect([error, ...logs].some((text) => text.includes(secret))).toBe(false);
 });
 
@@ -163,4 +163,48 @@ test('the notice says choosing a result lowers the strength', async ({ page }) =
   await ready(page);
   const notice = await page.locator('#choice-notice').textContent();
   expect(/passphrase only/.test(notice) && /strength is lower/.test(notice)).toBe(true);
+});
+
+test('the policy status names each state in words and gates Deal', async ({ page }) => {
+  await ready(page);
+  const status = page.locator('#policy-status');
+  await expect(status).toHaveAttribute('role', 'status');
+  await expect(status).toHaveAttribute('aria-live', 'polite');
+  // Valid.
+  await expect(status).toContainText('Policy valid');
+  await expect(status).toContainText('bits');
+  await expect(page.locator('#deal')).toBeEnabled();
+  // Unsupported. The advice stays. No deal is needed.
+  await page.locator('#maximum').fill('14');
+  await expect(status).toContainText('Policy unsupported');
+  await expect(status).toContainText('Try a maximum length');
+  await expect(page.locator('#deal')).toBeDisabled();
+  // Malformed.
+  await page.locator('#maximum').fill('10');
+  await expect(status).toContainText('Policy malformed');
+  await expect(page.locator('#deal')).toBeDisabled();
+  await page.locator('#maximum').fill('32');
+  await page.locator('#symbols').fill('a');
+  await expect(status).toContainText('Policy malformed');
+  await expect(page.locator('#deal')).toBeDisabled();
+  // Back to valid.
+  await page.locator('#symbols-reset').click();
+  await expect(status).toContainText('Policy valid');
+  await expect(page.locator('#deal')).toBeEnabled();
+});
+
+test('preflight makes no random call in the page', async ({ page }) => {
+  await page.addInitScript(() => {
+    window.__draws = 0;
+    const original = crypto.getRandomValues.bind(crypto);
+    crypto.getRandomValues = (array) => { window.__draws += 1; return original(array); };
+  });
+  await page.goto('/');
+  await expect(page.locator('#deal')).toBeEnabled();
+  const afterLoad = await page.evaluate(() => window.__draws);
+  await page.locator('#entropy').fill('70');
+  await page.locator('#maximum').fill('14');
+  await page.locator('#maximum').fill('32');
+  await expect(page.locator('#policy-status')).toContainText('Policy valid');
+  expect(await page.evaluate(() => window.__draws)).toBe(afterLoad);
 });

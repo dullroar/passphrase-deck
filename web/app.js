@@ -1,5 +1,6 @@
 import {
-  DEFAULT_SYMBOLS, DIGEST, PolicyError, digestHex, generate, parseWordlist, validateSymbols,
+  DEFAULT_SYMBOLS, DIGEST, PolicyError, digestHex, generate, parseWordlist, preflight,
+  validateSymbols,
 } from './core.js';
 
 const $ = (id) => document.getElementById(id);
@@ -61,10 +62,47 @@ function checkSymbols() {
   }
 }
 
+function readSettings() {
+  return {
+    minimum: readInt('minimum'),
+    maximum: readInt('maximum'),
+    entropy: readInt('entropy'),
+    symbols: $('symbols').value,
+  };
+}
+
+// Show the policy state before a deal. The check is pure. It uses no random
+// source. The state is named in words. Deal stays off unless the state is valid.
+function refreshPolicy() {
+  const box = $('policy-status');
+  if (!words) {
+    $('deal').disabled = true;
+    return false;
+  }
+  const result = preflight(words, readSettings());
+  let text;
+  if (result.state === 'valid') {
+    const scheme = `${result.count} words, ${result.digits} digits`;
+    text = `Policy valid: ${scheme}, ${result.bits} bits of entropy. You can deal.`;
+  } else if (result.state === 'unsupported') {
+    text = `Policy unsupported: ${result.message} Deal is off.`;
+  } else {
+    text = `Policy malformed: ${result.message} Deal is off.`;
+  }
+  box.textContent = text;
+  box.dataset.state = result.state;
+  $('deal').disabled = result.state !== 'valid';
+  return result.state === 'valid';
+}
+
 function deal() {
   clearSecrets();
   showError('');
   if (!words) return;
+  if (!refreshPolicy()) {
+    say('');
+    return;
+  }
   if (!checkSymbols()) {
     say('');
     return;
@@ -126,7 +164,7 @@ async function start() {
     showError('The word list failed verification. The app cannot make passphrases.');
     return;
   }
-  $('deal').disabled = false;
+  refreshPolicy();
   deal();
 }
 
@@ -147,14 +185,18 @@ $('symbols-reset').addEventListener('click', () => {
   $('symbols').value = DEFAULT_SYMBOLS;
   checkSymbols();
   endSecret('Separator symbols reset to the default. The old passphrase is cleared. Deal again to apply them.');
+  refreshPolicy();
 });
 // Any change to a generation setting clears the secret. An invalid setting
 // clears it too, and the deal stays stopped until the setting is fixed.
+// Each change also updates the policy status. No deal is needed.
 $('settings').addEventListener('input', () => {
   endSecret('A setting changed. The old passphrase is cleared. Deal again.');
+  refreshPolicy();
 });
 $('settings').addEventListener('change', () => {
   endSecret('A setting changed. The old passphrase is cleared. Deal again.');
+  refreshPolicy();
 });
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'hidden') endSecret('The tab was hidden. The passphrase is cleared. Deal again.');

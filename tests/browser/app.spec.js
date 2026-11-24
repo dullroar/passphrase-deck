@@ -104,7 +104,8 @@ test('accessibility semantics expose names, states, and live regions', async ({ 
   await ready(page);
   await expect(page.getByRole('button', { name: 'Reveal readable' })).toHaveAttribute('aria-pressed', 'false');
   await expect(page.getByRole('button', { name: 'Copy compact' })).toBeEnabled();
-  await expect(page.getByRole('status')).toHaveCount(1);
+  await expect(page.getByRole('status')).toHaveCount(2);
+  await expect(page.locator('#policy-status')).toHaveAttribute('aria-live', 'polite');
   await expect(page.locator('#error')).toHaveAttribute('role', 'alert');
   for (const label of ['Minimum length (1–128)', 'Maximum length (1–128)',
     'Minimum entropy in bits (64–128)', 'Capitalize the first letter of each word']) {
@@ -153,7 +154,7 @@ test('a bad symbol set stops the deal and shows no passphrase', async ({ page })
     await expect(page.locator('#symbols-error')).toBeVisible();
     await expect(page.locator('#symbols-error')).not.toContainText('last good');
     await expect(field).toHaveAttribute('aria-invalid', 'true');
-    await page.locator('#deal').click();
+    await expect(page.locator('#deal')).toBeDisabled();
     await expect(page.locator('#symbols-error')).toBeVisible();
     const state = await page.evaluate(() => document.body.innerText);
     expect(state.includes(first.readable)).toBe(false);
@@ -210,9 +211,8 @@ test('capitalization off by default gives lowercase words', async ({ page }) => 
 test('an infeasible policy shows a suggestion and no secret', async ({ page }) => {
   await ready(page);
   await page.locator('#maximum').fill('14');
-  await page.locator('#deal').click();
-  const alert = page.getByRole('alert');
-  await expect(alert).toContainText('Try a maximum length');
+  await expect(page.locator('#deal')).toBeDisabled();
+  await expect(page.locator('#policy-status')).toContainText('Try a maximum length');
   await expect(page.locator('#readable-value')).toHaveText('Hidden');
   await expect(page.locator('#readable-reveal')).toBeDisabled();
   await expect(page.locator('#compact-copy')).toBeDisabled();
@@ -221,13 +221,13 @@ test('an infeasible policy shows a suggestion and no secret', async ({ page }) =
 test('invalid input shows an error and keeps the floor', async ({ page }) => {
   await ready(page);
   await page.locator('#entropy').fill('40');
-  await page.locator('#deal').click();
-  await expect(page.getByRole('alert')).toContainText('entropy from 64 to 128');
+  await expect(page.locator('#deal')).toBeDisabled();
+  await expect(page.locator('#policy-status')).toContainText('entropy from 64 to 128');
   await page.locator('#entropy').fill('64');
   await page.locator('#minimum').fill('30');
   await page.locator('#maximum').fill('20');
-  await page.locator('#deal').click();
-  await expect(page.getByRole('alert')).toBeVisible();
+  await expect(page.locator('#deal')).toBeDisabled();
+  await expect(page.locator('#policy-status')).toContainText('Policy malformed');
   await page.locator('#minimum').fill('12');
   await page.locator('#maximum').fill('48');
   await page.locator('#entropy').fill('80');

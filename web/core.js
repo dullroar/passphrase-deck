@@ -138,6 +138,23 @@ export function selectPolicy(words, minimum, maximum, entropy, symbols = DEFAULT
     suggestion);
 }
 
+// Preflight. A pure check of the settings. It reads no random source and holds
+// no secret. It reuses selectPolicy, so it cannot differ from a real deal.
+// State "malformed": the settings are not well formed (POLICY_INVALID or
+// SYMBOLS_INVALID). State "unsupported": no scheme meets the policy
+// (POLICY_UNSUPPORTED). State "valid": it gives the scheme and the exact
+// number of whole bits of the output count (the floor of log2).
+export function preflight(words, { minimum, maximum, entropy, symbols = DEFAULT_SYMBOLS } = {}) {
+  try {
+    const { count, digits, outputs } = selectPolicy(words, minimum, maximum, entropy, symbols);
+    return { state: 'valid', count, digits, bits: outputs.toString(2).length - 1 };
+  } catch (error) {
+    if (!(error instanceof PolicyError)) throw error;
+    const state = error.code === 'POLICY_UNSUPPORTED' ? 'unsupported' : 'malformed';
+    return { state, code: error.code, message: error.message };
+  }
+}
+
 export function unrank(words, count, digits, rank, suffix, capitalize = false, symbols = '_') {
   const list = validateSymbols(symbols);
   const base = BigInt(list.length);

@@ -1,0 +1,228 @@
+[
+ {
+  "settings": {
+   "minimum": 12,
+   "maximum": 32,
+   "entropy": 64,
+   "symbols": ".,#$_!?"
+  },
+  "expect": {
+   "state": "valid",
+   "count": 4,
+   "digits": 6,
+   "bits": 73
+  }
+ },
+ {
+  "settings": {
+   "minimum": 12,
+   "maximum": 48,
+   "entropy": 80,
+   "symbols": ".,#$_!?"
+  },
+  "expect": {
+   "state": "valid",
+   "count": 4,
+   "digits": 6,
+   "bits": 80
+  }
+ },
+ {
+  "settings": {
+   "minimum": 12,
+   "maximum": 32,
+   "entropy": 64,
+   "symbols": "%"
+  },
+  "expect": {
+   "state": "valid",
+   "count": 4,
+   "digits": 6,
+   "bits": 64
+  }
+ },
+ {
+  "settings": {
+   "minimum": 12,
+   "maximum": 32,
+   "entropy": 64,
+   "symbols": "-"
+  },
+  "expect": {
+   "state": "valid",
+   "count": 4,
+   "digits": 6,
+   "bits": 64
+  }
+ },
+ {
+  "settings": {
+   "minimum": 12,
+   "maximum": 32,
+   "entropy": 64,
+   "symbols": "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~"
+  },
+  "expect": {
+   "state": "valid",
+   "count": 4,
+   "digits": 6,
+   "bits": 79
+  }
+ },
+ {
+  "settings": {
+   "minimum": 1,
+   "maximum": 128,
+   "entropy": 128,
+   "symbols": ".,#$_!?"
+  },
+  "expect": {
+   "state": "unsupported",
+   "code": "POLICY_UNSUPPORTED"
+  }
+ },
+ {
+  "settings": {
+   "minimum": 12,
+   "maximum": 14,
+   "entropy": 64,
+   "symbols": ".,#$_!?"
+  },
+  "expect": {
+   "state": "unsupported",
+   "code": "POLICY_UNSUPPORTED"
+  }
+ },
+ {
+  "settings": {
+   "minimum": 12,
+   "maximum": 32,
+   "entropy": 128,
+   "symbols": "."
+  },
+  "expect": {
+   "state": "unsupported",
+   "code": "POLICY_UNSUPPORTED"
+  }
+ },
+ {
+  "settings": {
+   "minimum": 20,
+   "maximum": 10,
+   "entropy": 64,
+   "symbols": "."
+  },
+  "expect": {
+   "state": "malformed",
+   "code": "POLICY_INVALID"
+  }
+ },
+ {
+  "settings": {
+   "minimum": 0,
+   "maximum": 32,
+   "entropy": 64,
+   "symbols": "."
+  },
+  "expect": {
+   "state": "malformed",
+   "code": "POLICY_INVALID"
+  }
+ },
+ {
+  "settings": {
+   "minimum": 12,
+   "maximum": 129,
+   "entropy": 64,
+   "symbols": "."
+  },
+  "expect": {
+   "state": "malformed",
+   "code": "POLICY_INVALID"
+  }
+ },
+ {
+  "settings": {
+   "minimum": 12,
+   "maximum": 32,
+   "entropy": 63,
+   "symbols": "."
+  },
+  "expect": {
+   "state": "malformed",
+   "code": "POLICY_INVALID"
+  }
+ },
+ {
+  "settings": {
+   "minimum": 12,
+   "maximum": 32,
+   "entropy": 129,
+   "symbols": "."
+  },
+  "expect": {
+   "state": "malformed",
+   "code": "POLICY_INVALID"
+  }
+ },
+ {
+  "settings": {
+   "minimum": null,
+   "maximum": 32,
+   "entropy": 64,
+   "symbols": "."
+  },
+  "expect": {
+   "state": "malformed",
+   "code": "POLICY_INVALID"
+  }
+ },
+ {
+  "settings": {
+   "minimum": 12,
+   "maximum": 32,
+   "entropy": 64,
+   "symbols": ""
+  },
+  "expect": {
+   "state": "malformed",
+   "code": "SYMBOLS_INVALID"
+  }
+ },
+ {
+  "settings": {
+   "minimum": 12,
+   "maximum": 32,
+   "entropy": 64,
+   "symbols": "a"
+  },
+  "expect": {
+   "state": "malformed",
+   "code": "SYMBOLS_INVALID"
+  }
+ },
+ {
+  "settings": {
+   "minimum": 12,
+   "maximum": 32,
+   "entropy": 64,
+   "symbols": ".."
+  },
+  "expect": {
+   "state": "malformed",
+   "code": "SYMBOLS_INVALID"
+  }
+ },
+ {
+  "settings": {
+   "minimum": 12,
+   "maximum": 32,
+   "entropy": 64,
+   "symbols": "................................."
+  },
+  "expect": {
+   "state": "malformed",
+   "code": "SYMBOLS_INVALID"
+  }
+ }
+]
