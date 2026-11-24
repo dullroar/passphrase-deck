@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'none'">
+  <meta name="referrer" content="no-referrer">
+  <title>Passphrase Deck</title>
+  <link rel="stylesheet" href="style.css">
+  <script type="module" src="app.js"></script>
+</head>
+<body>
+  <main>
+    <h1>Passphrase Deck</h1>
+    <p class="lead">Each deal makes one secret in two formats. Use the readable
+      format or the compact format for the same account. Do not use both for
+      different accounts.</p>
+
+    <p><button type="button" id="deal" class="deal" disabled>Deal another pair</button></p>
+    <p id="status" role="status" aria-live="polite"></p>
+    <p id="error" role="alert" class="error" hidden></p>
+
+    <section aria-labelledby="results-heading">
+      <h2 id="results-heading">Your passphrase (one secret, two formats)</h2>
+      <div class="pair">
+        <article class="card" aria-labelledby="readable-heading">
+          <h3 id="readable-heading">Readable</h3>
+          <p class="hint">Words with spaces. Easy to read and type.</p>
+          <p class="value"><code id="readable-value" data-secret="readable">Hidden</code></p>
+          <p class="actions">
+            <button type="button" id="readable-reveal" aria-pressed="false" disabled>Reveal readable</button>
+            <button type="button" id="readable-copy" disabled>Copy readable</button>
+          </p>
+        </article>
+        <article class="card" aria-labelledby="compact-heading">
+          <h3 id="compact-heading">Compact</h3>
+          <p class="hint">The same secret without spaces. Easy to paste.</p>
+          <p class="value"><code id="compact-value" data-secret="compact">Hidden</code></p>
+          <p class="actions">
+            <button type="button" id="compact-reveal" aria-pressed="false" disabled>Reveal compact</button>
+            <button type="button" id="compact-copy" disabled>Copy compact</button>
+          </p>
+        </article>
+      </div>
+      <p class="hint">Values stay in page memory only. A reload discards them.
+        The page does not clear the clipboard.</p>
+    </section>
+
+    <form id="settings" novalidate>
+      <h2>Settings</h2>
+      <p class="field">
+        <label for="minimum">Minimum length (1–128)</label>
+        <input id="minimum" type="number" inputmode="numeric" min="1" max="128" step="1" value="12">
+      </p>
+      <p class="field">
+        <label for="maximum">Maximum length (1–128)</label>
+        <input id="maximum" type="number" inputmode="numeric" min="1" max="128" step="1" value="32">
+      </p>
+      <p class="field">
+        <label for="entropy">Minimum entropy in bits (64–128)</label>
+        <input id="entropy" type="number" inputmode="numeric" min="64" max="128" step="1" value="64">
+      </p>
+      <p class="field check">
+        <input id="capitalize" type="checkbox">
+        <label for="capitalize">Capitalize the first letter of each word</label>
+      </p>
+      <p><button type="button" id="preset">Restrictive-site preset (capitalize)</button></p>
+      <p class="hint">Both formats meet the length range and the entropy floor.
+        Punctuation and digits are fixed by the design.</p>
+    </form>
+
+    <footer>
+      <p>Word list: EFF long list, by the Electronic Frontier Foundation, from
+        <a href="https://www.eff.org/dice" rel="noreferrer">eff.org/dice</a>.
+        Licensed under
+        <a href="https://creativecommons.org/licenses/by/4.0/" rel="noreferrer">CC BY 4.0</a>.</p>
+    </footer>
+  </main>
+</body>
+</html>

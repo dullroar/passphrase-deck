@@ -1,6 +1,6 @@
 ---
 id: 03-static-web
-status: pending
+status: done
 depends_on: [02-python-reference]
 touches:
   - web/**
@@ -8,7 +8,9 @@ touches:
   - plans/build-passphrase-deck/steps/03-static-web.md
 lane: none
 gate: python3 scripts/verify_wordlist.py && (cd tests/browser && npm ci && npx --no-install playwright install chromium && npm test) && python3 scripts/check_context.py && git diff --check
-evidence: ""
+evidence: gate passed 2026-11-24 (driver-verified)
+claimed_by: claude cli-default
+claimed_at: "2026-11-24T02:04:08Z"
 ---
 
 # Build and test the static browser app
@@ -45,3 +47,7 @@ requests during generation and copy after initial asset load. Check URLs,
 cookies, local storage, session storage, logs, and caches for secret values.
 Use fixtures that keep assertion output free of real secrets.
 Record gate evidence in this step.
+
+## Resume notes
+
+Gate environment: Linux (WSL2), Node.js 24, Playwright 1.65.1, Chromium 159 headless. The tests check the accessibility tree (roles, names, states, live regions). No real screen reader (NVDA, VoiceOver, TalkBack) ran. A person must test one on a real device in step 05. The app loads the word list with fetch, so it needs an HTTP origin. Step 04 must handle file or offline packaging.
