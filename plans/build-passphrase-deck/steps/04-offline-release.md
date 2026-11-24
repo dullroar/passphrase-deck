@@ -18,7 +18,9 @@ touches:
   - plans/build-passphrase-deck/steps/04-offline-release.md
 lane: none
 gate: python3 scripts/verify_wordlist.py && python3 -m unittest discover -s tests -p 'test_*.py' && (cd tests/browser && npm ci && npx --no-install playwright install chromium && npm test) && python3 scripts/verify_release.py --self-test && python3 scripts/check_context.py && git diff --check
-evidence: "2026-11-23: every gate part passed. Wordlist verified. 8 Python tests passed. 32 Chromium tests passed, including the offline file:// tests. verify_release.py --self-test passed. check_context.py and git diff --check passed. No PWA was added. See Resume notes for the operator handoff."
+evidence: gate passed 2026-11-24 (driver-verified)
+claimed_by: claude cli-default
+claimed_at: "2026-11-24T02:08:52Z"
 ---
 
 # Package and verify the offline release
