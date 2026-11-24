@@ -15,7 +15,7 @@ WORDLIST = Path(__file__).resolve().parent.parent / 'data' / 'eff_large_wordlist
 DIGEST = 'addd35536511597a02fa0a9ff1e5284677b8883b83e986e43f15a3db996b903e'
 SCHEMES = ((4, 6), (6, 2))
 DEFAULT_SYMBOLS = '.,#$_!?'
-ALLOWED_SYMBOLS = frozenset(string.punctuation) - {'-'}
+ALLOWED_SYMBOLS = frozenset(string.punctuation)
 MAX_SYMBOLS = 32
 
 
@@ -150,7 +150,7 @@ def main(argv=None):
     parser.add_argument('--capitalize', action='store_true',
                         help='capitalize the first letter of each word')
     parser.add_argument('--symbols', default=DEFAULT_SYMBOLS,
-                        help='separator symbols, 1 to 32 distinct punctuation characters, no hyphen')
+                        help='separator symbols, 1 to 32 distinct punctuation characters')
     parser.add_argument('--count', type=int, default=1, help='number of pairs (1–1000)')
     args = parser.parse_args(argv)
     if not 1 <= args.count <= 1000:
