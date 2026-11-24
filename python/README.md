@@ -1,7 +1,8 @@
 # Python reference
 
 Run `python3 python/passphrase.py` to print one pair. Use `--min`, `--max`,
-`--entropy`, and `--count` to set the policy and request a batch. Run with
+`--entropy`, and `--count` to set the policy and request a batch. Use
+`--symbols` to set the separator symbols. The default is `.,#$_!?`. Run with
 `--help` for the options. The default prints two lines: readable, then
 compact. Batch mode repeats this pair of lines.
 

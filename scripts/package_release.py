@@ -70,9 +70,11 @@ def _replace_once(text, old, new):
 def classic_script(core, app):
     """Join the two modules into one classic script inside a closure."""
     core = re.sub(r'^export ', '', core, flags=re.MULTILINE)
-    first, _, rest = app.partition('\n')
-    if not first.startswith('import ') or 'export ' in rest:
+    # The one import statement may span several lines.
+    match = re.match(r"import\s*\{[^}]*\}\s*from\s*'\./core\.js';[ \t]*\n", app)
+    if not match or 'export ' in app[match.end():]:
         raise ValueError('unexpected app.js module layout')
+    rest = app[match.end():]
     if re.search(r'^import ', core + rest, flags=re.MULTILINE):
         raise ValueError('unexpected import statement')
     return "(function () {\n'use strict';\n" + core + '\n' + rest + '\n})();\n'

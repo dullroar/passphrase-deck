@@ -9,5 +9,25 @@
     {"rank": 0, "readable": "a_ a0", "compact": "a_a0"},
     {"rank": 19, "readable": "a_ a-b9", "compact": "a_a-b9"},
     {"rank": 89, "readable": "ba_ ba9", "compact": "ba_ba9"}
-  ]
+  ],
+  "symbol_set": {
+    "description": "Public synthetic vectors for a three-symbol set. The first gap is the most significant symbol digit.",
+    "words": ["a", "ba"],
+    "word_count": 3,
+    "digits": 1,
+    "minimum": 5,
+    "maximum": 13,
+    "symbols": "%&*",
+    "vectors": [
+      {"rank": 0, "readable": "a% a% a0", "compact": "a%a%a0"},
+      {"rank": 1, "readable": "a% a% a1", "compact": "a%a%a1"},
+      {"rank": 10, "readable": "a% a& a0", "compact": "a%a&a0"},
+      {"rank": 50, "readable": "a& a* a0", "compact": "a&a*a0"},
+      {"rank": 90, "readable": "a% a% ba0", "compact": "a%a%ba0"},
+      {"rank": 100, "readable": "a% a& ba0", "compact": "a%a&ba0"},
+      {"rank": 179, "readable": "a* a* ba9", "compact": "a*a*ba9"},
+      {"rank": 359, "readable": "a* ba* ba9", "compact": "a*ba*ba9"},
+      {"rank": 719, "readable": "ba* ba* ba9", "compact": "ba*ba*ba9"}
+    ]
+  }
 }

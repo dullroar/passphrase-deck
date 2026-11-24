@@ -1,4 +1,6 @@
-import { DIGEST, PolicyError, digestHex, generate, parseWordlist } from './core.js';
+import {
+  DEFAULT_SYMBOLS, DIGEST, PolicyError, digestHex, generate, parseWordlist, validateSymbols,
+} from './core.js';
 
 const $ = (id) => document.getElementById(id);
 const FORMATS = ['readable', 'compact'];
@@ -41,16 +43,39 @@ function readInt(id) {
   return /^\d{1,4}$/.test(text) ? Number(text) : NaN;
 }
 
+// The last good symbol set. A bad edit keeps this value in use.
+let goodSymbols = DEFAULT_SYMBOLS;
+
+function checkSymbols() {
+  const box = $('symbols-error');
+  const input = $('symbols');
+  try {
+    validateSymbols(input.value);
+    goodSymbols = input.value;
+    box.textContent = '';
+    box.hidden = true;
+    input.removeAttribute('aria-invalid');
+    return true;
+  } catch (error) {
+    box.textContent = `${error.message} The last good set is still in use.`;
+    box.hidden = false;
+    input.setAttribute('aria-invalid', 'true');
+    return false;
+  }
+}
+
 function deal() {
   clearSecrets();
   showError('');
   if (!words) return;
+  checkSymbols();
   try {
     const pair = generate(words, {
       minimum: readInt('minimum'),
       maximum: readInt('maximum'),
       entropy: readInt('entropy'),
       capitalize: $('capitalize').checked,
+      symbols: goodSymbols,
     });
     secrets = { readable: pair.readable, compact: pair.compact };
     FORMATS.forEach(render);
@@ -109,6 +134,12 @@ $('deal').addEventListener('click', deal);
 $('preset').addEventListener('click', () => {
   $('capitalize').checked = true;
   say('Restrictive-site preset on: first letters are capitalized. Deal again to apply it.');
+});
+$('symbols').addEventListener('input', checkSymbols);
+$('symbols-reset').addEventListener('click', () => {
+  $('symbols').value = DEFAULT_SYMBOLS;
+  checkSymbols();
+  say('Separator symbols reset to the default. Deal again to apply them.');
 });
 $('settings').addEventListener('submit', (event) => event.preventDefault());
 for (const name of FORMATS) {

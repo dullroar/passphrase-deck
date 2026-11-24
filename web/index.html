@@ -65,9 +65,16 @@
         <input id="capitalize" type="checkbox">
         <label for="capitalize">Capitalize the first letter of each word</label>
       </p>
+      <p class="field">
+        <label for="symbols">Separator symbols (1–32, no letters, digits, spaces or hyphens)</label>
+        <input id="symbols" type="text" value=".,#$_!?" maxlength="64" autocomplete="off"
+          autocapitalize="off" autocorrect="off" spellcheck="false" aria-describedby="symbols-error">
+        <button type="button" id="symbols-reset">Reset symbols to default</button>
+      </p>
+      <p id="symbols-error" role="alert" class="error" hidden></p>
       <p><button type="button" id="preset">Restrictive-site preset (capitalize)</button></p>
       <p class="hint">Both formats meet the length range and the entropy floor.
-        Punctuation and digits are fixed by the design.</p>
+        Each gap between words gets one symbol from your set. The digit count is fixed by the design.</p>
     </form>
 
     <footer>

@@ -1,6 +1,6 @@
 ---
 id: 04b-symbol-set
-status: pending
+status: done
 depends_on: [04a-single-file-release]
 touches:
   - SPEC.md
@@ -20,7 +20,9 @@ touches:
   - plans/build-passphrase-deck/steps/05-production-verification.md
 lane: none
 gate: python3 scripts/verify_wordlist.py && python3 -m unittest discover -s tests -p 'test_*.py' && python3 scripts/check_feasibility.py && (cd tests/browser && npm ci && npx --no-install playwright install chromium && npm test) && python3 scripts/verify_release.py --self-test && python3 scripts/check_context.py && git diff --check
-evidence: ""
+evidence: gate passed 2026-11-24 (driver-verified)
+claimed_by: claude cli-default
+claimed_at: "2026-11-24T14:43:49Z"
 ---
 
 # Let the user choose the separator symbols
@@ -84,6 +86,26 @@ capitalization setting and does not change the set.
 4. Check that the one-file build still passes `verify_release.py`.
    Do not change the CSP rules or the `data-cfasync` attribute.
 5. Update `README.md` and `docs/release.md` if they mention the underscore.
+
+## Resume notes
+
+Done and checked (gate parts that ran): `verify_wordlist.py`, the Python unit
+tests, `check_feasibility.py`, `verify_release.py --self-test`,
+`check_context.py`.
+
+Done but NOT run: the browser part of the gate. The shell in the first session
+denied `npm`, `npx` and `node`. These files changed and need a run of
+`cd tests/browser && npm ci && npx --no-install playwright install chromium && npm test`:
+`web/core.js`, `web/app.js`, `web/index.html`, `tests/browser/app.spec.js`,
+`tests/browser/core.spec.js`, `tests/browser/single.spec.js`,
+`tests/browser/offline.spec.js`.
+
+Second session: `npm ci` was denied again by the shell (don't-ask mode). The
+browser gate is still not run. The owner must allow `npm`, `npx` and `node`,
+or run the browser gate by hand.
+
+Third session: the shell allowed `npm`, `npx` and `node`. The browser gate
+ran: 47 tests passed. All other gate parts passed. The step is done.
 
 ## Limits
 

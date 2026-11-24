@@ -4,6 +4,9 @@
 export const DIGEST = 'addd35536511597a02fa0a9ff1e5284677b8883b83e986e43f15a3db996b903e';
 export const SCHEMES = [[4, 6], [6, 2]];
 export const MAX_DRAWS = 128;
+export const DEFAULT_SYMBOLS = '.,#$_!?';
+export const MAX_SYMBOLS = 32;
+const ALLOWED_SYMBOLS = new Set('!"#$%&\'()*+,./:;<=>?@[\\]^_`{|}~');
 
 export class PolicyError extends Error {
   constructor(code, message, suggestion = null) {
@@ -20,6 +23,27 @@ export class RandomLimitError extends Error {
     this.name = 'RandomLimitError';
     this.code = 'RANDOM_LIMIT';
   }
+}
+
+// Check the symbol set. Return the symbols as an array. Reject the whole set
+// on any bad symbol. Name the position and code point, never the text.
+export function validateSymbols(symbols) {
+  if (typeof symbols !== 'string' || symbols.length < 1 || symbols.length > MAX_SYMBOLS) {
+    throw new PolicyError('SYMBOLS_INVALID', `Use 1 to ${MAX_SYMBOLS} symbols.`);
+  }
+  const seen = new Set();
+  const list = symbols.split('');
+  list.forEach((char, index) => {
+    const hex = char.charCodeAt(0).toString(16).toUpperCase().padStart(4, '0');
+    const name = `symbol ${index + 1} (U+${hex})`;
+    if (!ALLOWED_SYMBOLS.has(char)) {
+      throw new PolicyError('SYMBOLS_INVALID',
+        `The ${name} is not allowed. Use ASCII punctuation. Do not use letters, digits, spaces or hyphens.`);
+    }
+    if (seen.has(char)) throw new PolicyError('SYMBOLS_INVALID', `The ${name} is repeated.`);
+    seen.add(char);
+  });
+  return list;
 }
 
 // Check the structure of the wordlist text. Return the list of words.
@@ -72,37 +96,39 @@ function validBounds(minimum, maximum, entropy) {
     minimum >= 1 && minimum <= maximum && maximum <= 128 && entropy >= 64 && entropy <= 128;
 }
 
-function trySelect(words, minimum, maximum, entropy) {
+function trySelect(words, minimum, maximum, entropy, symbolCount) {
   for (const [count, digits] of SCHEMES) {
     const suffix = completions(words, count, digits, minimum, maximum);
-    const outputs = suffix(count, 0) * 10n ** BigInt(digits);
+    const outputs = suffix(count, 0) * 10n ** BigInt(digits) *
+      BigInt(symbolCount) ** BigInt(count - 1);
     if (outputs >= 1n << BigInt(entropy)) return { count, digits, outputs, suffix };
   }
   return null;
 }
 
 // Find a nearby change that keeps the entropy floor, then one that lowers it.
-function suggest(words, minimum, maximum, entropy) {
+function suggest(words, minimum, maximum, entropy, n) {
   for (let max = maximum + 1; max <= 128; max += 1) {
-    if (trySelect(words, minimum, max, entropy)) return { maximum: max };
+    if (trySelect(words, minimum, max, entropy, n)) return { maximum: max };
   }
   for (let min = minimum - 1; min >= 1; min -= 1) {
-    if (trySelect(words, min, maximum, entropy)) return { minimum: min };
+    if (trySelect(words, min, maximum, entropy, n)) return { minimum: min };
   }
   for (let bits = entropy - 1; bits >= 64; bits -= 1) {
-    if (trySelect(words, minimum, maximum, bits)) return { entropy: bits };
+    if (trySelect(words, minimum, maximum, bits, n)) return { entropy: bits };
   }
   return null;
 }
 
-export function selectPolicy(words, minimum, maximum, entropy) {
+export function selectPolicy(words, minimum, maximum, entropy, symbols = DEFAULT_SYMBOLS) {
   if (!validBounds(minimum, maximum, entropy)) {
     throw new PolicyError('POLICY_INVALID',
       'Use whole numbers: length from 1 to 128, minimum not above maximum, entropy from 64 to 128.');
   }
-  const found = trySelect(words, minimum, maximum, entropy);
+  const n = validateSymbols(symbols).length;
+  const found = trySelect(words, minimum, maximum, entropy, n);
   if (found) return found;
-  const suggestion = suggest(words, minimum, maximum, entropy);
+  const suggestion = suggest(words, minimum, maximum, entropy, n);
   let hint = 'No change within the allowed ranges meets the policy.';
   if (suggestion && suggestion.maximum) hint = `Try a maximum length of ${suggestion.maximum} or more.`;
   else if (suggestion && suggestion.minimum) hint = `Try a minimum length of ${suggestion.minimum} or less.`;
@@ -112,9 +138,20 @@ export function selectPolicy(words, minimum, maximum, entropy) {
     suggestion);
 }
 
-export function unrank(words, count, digits, rank, suffix, capitalize = false) {
-  let tupleRank = rank / 10n ** BigInt(digits);
+export function unrank(words, count, digits, rank, suffix, capitalize = false, symbols = '_') {
+  const list = validateSymbols(symbols);
+  const base = BigInt(list.length);
+  const quotient = rank / 10n ** BigInt(digits);
   const digitRank = rank % 10n ** BigInt(digits);
+  const gapSpan = base ** BigInt(count - 1);
+  let tupleRank = quotient / gapSpan;
+  let symbolRank = quotient % gapSpan;
+  const gaps = [];
+  for (let i = 0; i < count - 1; i += 1) {
+    gaps.push(list[Number(symbolRank % base)]);
+    symbolRank /= base;
+  }
+  gaps.reverse();
   const selected = [];
   let length = 0;
   for (let remaining = count - 1; remaining >= 0; remaining -= 1) {
@@ -133,7 +170,7 @@ export function unrank(words, count, digits, rank, suffix, capitalize = false) {
   }
   if (tupleRank !== 0n) throw new Error('rank outside valid range');
   const shown = capitalize ? selected.map((w) => w[0].toUpperCase() + w.slice(1)) : selected;
-  const readable = shown.join('_ ') + digitRank.toString().padStart(digits, '0');
+  const readable = shown.map((w, i) => (i < count - 1 ? `${w}${gaps[i]} ` : w)).join('') + digitRank.toString().padStart(digits, '0');
   return { readable, compact: readable.replaceAll(' ', '') };
 }
 
@@ -160,7 +197,7 @@ function browserDraw(size) {
 }
 
 // Production entry point. It takes no random source.
-export function generate(words, { minimum = 12, maximum = 32, entropy = 64, capitalize = false } = {}) {
-  const { count, digits, outputs, suffix } = selectPolicy(words, minimum, maximum, entropy);
-  return unrank(words, count, digits, randBelow(outputs, browserDraw), suffix, capitalize);
+export function generate(words, { minimum = 12, maximum = 32, entropy = 64, capitalize = false, symbols = DEFAULT_SYMBOLS } = {}) {
+  const { count, digits, outputs, suffix } = selectPolicy(words, minimum, maximum, entropy, symbols);
+  return unrank(words, count, digits, randBelow(outputs, browserDraw), suffix, capitalize, symbols);
 }

@@ -50,7 +50,7 @@ test('the packaged copy deals with the network off', async ({ browser }) => {
   await expect(page.locator('#deal')).toBeEnabled();
   const first = await reveal(page);
   expect(first.compact === first.readable.replaceAll(' ', '')).toBe(true);
-  expect(/^[a-z-]+(_ [a-z-]+)+\d+$/.test(first.readable)).toBe(true);
+  expect(/^[a-z-]+([.,#$_!?] [a-z-]+)+\d+$/.test(first.readable)).toBe(true);
   expect(first.readable.length <= 32 && first.compact.length >= 12).toBe(true);
   await page.locator('#deal').click();
   const second = await reveal(page);

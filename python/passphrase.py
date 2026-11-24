@@ -8,11 +8,15 @@ import itertools
 from pathlib import Path
 import re
 import secrets
+import string
 import sys
 
 WORDLIST = Path(__file__).resolve().parent.parent / 'data' / 'eff_large_wordlist.txt'
 DIGEST = 'addd35536511597a02fa0a9ff1e5284677b8883b83e986e43f15a3db996b903e'
 SCHEMES = ((4, 6), (6, 2))
+DEFAULT_SYMBOLS = '.,#$_!?'
+ALLOWED_SYMBOLS = frozenset(string.punctuation) - {'-'}
+MAX_SYMBOLS = 32
 
 
 class PolicyError(ValueError):
@@ -21,6 +25,22 @@ class PolicyError(ValueError):
 
 class RandomLimitError(RuntimeError):
     pass
+
+
+def validate_symbols(symbols):
+    """Return the symbols as a tuple. Reject the whole set on any bad symbol."""
+    if not isinstance(symbols, str) or not 1 <= len(symbols) <= MAX_SYMBOLS:
+        raise PolicyError(f'SYMBOLS_INVALID: use 1 to {MAX_SYMBOLS} symbols')
+    seen = set()
+    for position, char in enumerate(symbols, 1):
+        if char not in ALLOWED_SYMBOLS:
+            raise PolicyError(f'SYMBOLS_INVALID: symbol {position} (U+{ord(char):04X}) '
+                              'is not an allowed punctuation character')
+        if char in seen:
+            raise PolicyError(f'SYMBOLS_INVALID: symbol {position} (U+{ord(char):04X}) '
+                              'is repeated')
+        seen.add(char)
+    return tuple(symbols)
 
 
 def load_words(path=WORDLIST):
@@ -55,21 +75,29 @@ def _completions(words, count, digits, minimum, maximum):
     return suffix
 
 
-def select_policy(words, minimum, maximum, entropy):
+def select_policy(words, minimum, maximum, entropy, symbols=DEFAULT_SYMBOLS):
     if (any(type(value) is not int for value in (minimum, maximum, entropy)) or
             not 1 <= minimum <= maximum <= 128 or not 64 <= entropy <= 128):
         raise PolicyError('invalid policy bounds')
+    symbol_count = len(validate_symbols(symbols))
     for count, digits in SCHEMES:
         suffix = _completions(words, count, digits, minimum, maximum)
         tuples = suffix(count, 0)
-        outputs = tuples * 10 ** digits
+        outputs = tuples * 10 ** digits * symbol_count ** (count - 1)
         if outputs >= 1 << entropy:
             return count, digits, outputs, suffix
     raise PolicyError('POLICY_UNSUPPORTED: increase maximum or lower entropy target')
 
 
-def _unrank(words, count, digits, rank, suffix, capitalize=False):
-    tuple_rank, digit_rank = divmod(rank, 10 ** digits)
+def _unrank(words, count, digits, rank, suffix, capitalize=False, symbols='_'):
+    symbols = validate_symbols(symbols)
+    quotient, digit_rank = divmod(rank, 10 ** digits)
+    tuple_rank, symbol_rank = divmod(quotient, len(symbols) ** (count - 1))
+    gaps = []
+    for _ in range(count - 1):
+        symbol_rank, index = divmod(symbol_rank, len(symbols))
+        gaps.append(symbols[index])
+    gaps.reverse()
     selected = []
     length = 0
     for remaining in range(count - 1, -1, -1):
@@ -86,7 +114,8 @@ def _unrank(words, count, digits, rank, suffix, capitalize=False):
         raise ValueError('rank outside valid range')
     if capitalize:
         selected = [word[0].upper() + word[1:] for word in selected]
-    readable = '_ '.join(selected) + str(digit_rank).zfill(digits)
+    readable = ''.join(word + gap + ' ' for word, gap in zip(selected, gaps))
+    readable += selected[-1] + str(digit_rank).zfill(digits)
     return readable, readable.replace(' ', '')
 
 
@@ -106,10 +135,11 @@ def _randbelow(n, draw):
     raise RandomLimitError('RANDOM_LIMIT')
 
 
-def generate(words, minimum=12, maximum=32, entropy=64, capitalize=False):
-    count, digits, outputs, suffix = select_policy(words, minimum, maximum, entropy)
+def generate(words, minimum=12, maximum=32, entropy=64, capitalize=False,
+             symbols=DEFAULT_SYMBOLS):
+    count, digits, outputs, suffix = select_policy(words, minimum, maximum, entropy, symbols)
     rank = _randbelow(outputs, secrets.token_bytes)
-    return _unrank(words, count, digits, rank, suffix, capitalize)
+    return _unrank(words, count, digits, rank, suffix, capitalize, symbols)
 
 
 def main(argv=None):
@@ -119,16 +149,18 @@ def main(argv=None):
     parser.add_argument('--entropy', type=int, default=64)
     parser.add_argument('--capitalize', action='store_true',
                         help='capitalize the first letter of each word')
+    parser.add_argument('--symbols', default=DEFAULT_SYMBOLS,
+                        help='separator symbols, 1 to 32 distinct punctuation characters, no hyphen')
     parser.add_argument('--count', type=int, default=1, help='number of pairs (1–1000)')
     args = parser.parse_args(argv)
     if not 1 <= args.count <= 1000:
         parser.error('--count must be between 1 and 1000')
     try:
         words = load_words()
-        select_policy(words, args.minimum, args.maximum, args.entropy)
+        select_policy(words, args.minimum, args.maximum, args.entropy, args.symbols)
         for _ in range(args.count):
             readable, compact = generate(words, args.minimum, args.maximum, args.entropy,
-                                           args.capitalize)
+                                           args.capitalize, args.symbols)
             print(readable)
             print(compact)
     except (OSError, UnicodeError, ValueError, RandomLimitError) as exc:
