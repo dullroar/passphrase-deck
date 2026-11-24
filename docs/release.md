@@ -145,12 +145,29 @@ python3 scripts/verify_release.py \
   --manifest "$RALPH_WORK/release/release-manifest.json"
 ```
 
+The `--manifest` flag is required. The verifier refuses to run without it.
+The manifest gives the release digest. Without it, the verifier cannot prove
+that the host delivers the reviewed bytes.
+
 It fails on missing evidence, an open finding, a failed device check, a TLS
 failure, a missing header, an outside origin, an inline block that the
 meta CSP does not cover or a byte mismatch. It fetches `passphrase.html`
 and compares its SHA-256 sum with the manifest. It checks the headers and
 runs the single-file static checks on the hosted bytes. It does not follow
 a redirect to another URL.
+
+### Delivered artifact: rule to check
+
+Each rule in the "Delivered artifact" section of `SPEC.md` maps to a check.
+
+| Rule | Check |
+| --- | --- |
+| No external executable resource | `check_single` finds an external script, link, frame, object, `<base>`, absolute URL, `javascript:` URL or another loaded file. |
+| No network request from the application | `check_js` bans `fetch` of a non-local URL, `XMLHttpRequest`, `WebSocket`, `EventSource`, `sendBeacon` and dynamic import. The CSP has no `connect-src` and `default-src 'none'`. |
+| No analytics or telemetry | The checks above, plus a check for the `ping` attribute and for an external image or media source. The browser tests also count requests. |
+| Restrictive CSP | `check_csp` needs the exact hashes and bans `'self'`, `unsafe-inline` and `unsafe-eval`. It checks a header CSP when the host sends one. |
+| Works offline | `check_single` needs one self-contained file. The browser tests open it with the network off. The operator checks it on real phones. |
+| Matches a published digest | The verifier compares the SHA-256 sum of the hosted bytes with the manifest. `--manifest` is required. |
 
 To test generation and the CSP against the hosted page, run the server
 tests with the hosted address. All other requests stay blocked:

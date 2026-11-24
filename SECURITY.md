@@ -22,6 +22,13 @@ the private channel supplied with the release. Do not include a real
 passphrase or other secret in a report. The owner must provide a working
 private reporting channel before public distribution.
 
+## Delivered artifact
+
+The user trusts the page that the host delivers. A host or an edge proxy can
+change the bytes. Compare the delivered `passphrase.html` with the published
+release digest. The production verifier does this and needs the release
+manifest. See the "Delivered artifact" section of `SPEC.md`.
+
 ## Secret lifecycle
 
 The page clears its references to a secret when a setting changes, when the
