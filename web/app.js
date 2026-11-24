@@ -17,6 +17,7 @@ function say(message) {
 }
 
 function showError(message) {
+  if (message) $('loading').hidden = true;
   const box = $('error');
   box.textContent = message;
   box.hidden = !message;
@@ -160,10 +161,12 @@ async function start() {
       throw new Error('digest mismatch');
     }
     words = parseWordlist(new TextDecoder('ascii', { fatal: true }).decode(buffer));
-  } catch {
-    showError('The word list failed verification. The app cannot make passphrases.');
+  } catch (error) {
+    const reason = error && error.message ? ` (${error.message})` : '';
+    showError(`The word list failed verification${reason}. The app cannot make passphrases. Reload the page. If this stays, try another browser.`);
     return;
   }
+  $('loading').hidden = true;
   refreshPolicy();
   deal();
 }
@@ -174,6 +177,18 @@ function endSecret(message) {
   clearSecrets();
   if (message) say(message);
 }
+
+// Show any failure that would otherwise be silent. Messages never hold a secret.
+window.addEventListener('error', (event) => {
+  showError(`The page hit an error: ${event.message || 'unknown'}. Reload the page. If this stays, try another browser.`);
+});
+window.addEventListener('unhandledrejection', (event) => {
+  const reason = event.reason && event.reason.message ? event.reason.message : 'unknown';
+  showError(`The page hit an error: ${reason}. Reload the page. If this stays, try another browser.`);
+});
+document.addEventListener('securitypolicyviolation', (event) => {
+  showError(`The browser blocked part of the page (${event.violatedDirective}). Turn off extensions for this page and reload.`);
+});
 
 $('deal').addEventListener('click', deal);
 $('preset').addEventListener('click', () => {

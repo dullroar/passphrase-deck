@@ -218,6 +218,21 @@ test('an infeasible policy shows a suggestion and no secret', async ({ page }) =
   await expect(page.locator('#compact-copy')).toBeDisabled();
 });
 
+test('a disabled deal button shows a visible error next to it', async ({ page }) => {
+  await ready(page);
+  await expect(page.locator('#loading')).toBeHidden();
+  await page.locator('#entropy').fill('96');
+  await expect(page.locator('#deal')).toBeDisabled();
+  const note = page.locator('#policy-status');
+  await expect(note).toBeVisible();
+  await expect(note).toContainText('Policy unsupported');
+  const deal = await page.locator('#deal').boundingBox();
+  const box = await note.boundingBox();
+  expect(box.y - deal.y).toBeLessThan(150);
+  await page.locator('#entropy').fill('64');
+  await expect(note).toContainText('Policy valid');
+});
+
 test('invalid input shows an error and keeps the floor', async ({ page }) => {
   await ready(page);
   await page.locator('#entropy').fill('40');
