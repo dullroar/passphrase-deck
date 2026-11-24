@@ -18,3 +18,6 @@ button:disabled { cursor: not-allowed; }
 .field.check { flex-direction: row; align-items: center; gap: 0.5rem; }
 .field input[type=number] { font: inherit; padding: 0.4rem; min-height: 2.5rem; }
 .field.check input { width: 1.5rem; height: 1.5rem; }
+#policy-status { font-size: 1rem; opacity: 1; }
+#policy-status:empty { display: none; }
+#policy-status[data-state="unsupported"], #policy-status[data-state="malformed"] { border: 2px solid #c01c28; padding: 0.5rem 0.75rem; font-weight: 600; }

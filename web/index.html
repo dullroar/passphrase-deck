@@ -18,8 +18,13 @@
       different accounts.</p>
 
     <p><button type="button" id="deal" class="deal" disabled>Deal another pair</button></p>
+    <p id="policy-status" role="status" aria-live="polite" class="hint"></p>
     <p id="status" role="status" aria-live="polite"></p>
     <p id="error" role="alert" class="error" hidden></p>
+    <p id="loading" class="error">Loading. If this message stays, your browser did not
+      start the page script. It may be too old, or it may be blocked. Try a current
+      browser, or turn off extensions for this page.</p>
+    <noscript><p class="error">This page needs JavaScript. Turn JavaScript on and reload.</p></noscript>
 
     <section aria-labelledby="results-heading">
       <h2 id="results-heading">Your passphrase (one secret, two formats)</h2>
@@ -76,7 +81,6 @@
         <button type="button" id="symbols-reset">Reset symbols to default</button>
       </p>
       <p id="symbols-error" role="alert" class="error" hidden></p>
-      <p id="policy-status" role="status" aria-live="polite" class="hint"></p>
       <p><button type="button" id="preset">Restrictive-site preset (capitalize)</button></p>
       <p class="hint">Both formats meet the length range and the entropy floor.
         Each gap between words gets one symbol from your set. The digit count is fixed by the design.</p>
