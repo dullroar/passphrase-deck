@@ -11,9 +11,9 @@ touches:
   - plans/review-hardening/steps/03-secret-lifecycle.md
 lane: none
 gate: python3 scripts/verify_wordlist.py && python3 -m unittest discover -s tests -p 'test_*.py' && python3 scripts/check_feasibility.py && (cd tests/browser && npm ci && npx --no-install playwright install chromium && npm test) && python3 scripts/verify_release.py --self-test && python3 scripts/check_context.py && git diff --check
-claimed_by: ""
-claimed_at: ""
-evidence: "2026-11-24: gate commands all passed (wordlist, 31 unit tests, feasibility, 70 browser tests, release self-test, check_context, diff --check). New file tests/browser/lifecycle.spec.js."
+claimed_by: claude cli-default
+claimed_at: "2026-11-24T15:55:56Z"
+evidence: gate passed 2026-11-24 (driver-verified)
 ---
 
 # Specify and test when a secret ends
