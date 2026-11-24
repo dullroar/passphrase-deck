@@ -1,0 +1,13 @@
+{
+  "name": "passphrase-deck-browser-tests",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Verification only. Not shipped with the app.",
+  "type": "module",
+  "scripts": {
+    "test": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.65.1"
+  }
+}
