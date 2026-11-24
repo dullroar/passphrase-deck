@@ -20,7 +20,9 @@ touches:
   - plans/build-passphrase-deck/steps/05-production-verification.md
 lane: none
 gate: python3 scripts/verify_wordlist.py && python3 -m unittest discover -s tests -p 'test_*.py' && python3 scripts/check_feasibility.py && (cd tests/browser && npm ci && npx --no-install playwright install chromium && npm test) && python3 scripts/verify_release.py --self-test && python3 scripts/check_context.py && git diff --check
-evidence: "Gate passed 2026-11-24: wordlist verified; 15 Python tests OK; feasibility checks passed; 47 browser tests passed; verify_release self-test passed; check_context and git diff --check clean."
+evidence: gate passed 2026-11-24 (driver-verified)
+claimed_by: claude cli-default
+claimed_at: "2026-11-24T14:43:49Z"
 ---
 
 # Let the user choose the separator symbols
