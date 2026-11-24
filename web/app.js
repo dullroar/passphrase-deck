@@ -130,16 +130,38 @@ async function start() {
   deal();
 }
 
+// Secret lifecycle (see SPEC.md). Dropping references is best-effort disposal.
+// It is not secure memory erasure.
+function endSecret(message) {
+  clearSecrets();
+  if (message) say(message);
+}
+
 $('deal').addEventListener('click', deal);
 $('preset').addEventListener('click', () => {
   $('capitalize').checked = true;
-  say('Restrictive-site preset on: first letters are capitalized. Deal again to apply it.');
+  endSecret('Restrictive-site preset on: first letters are capitalized. The old passphrase is cleared. Deal again to apply it.');
 });
 $('symbols').addEventListener('input', checkSymbols);
 $('symbols-reset').addEventListener('click', () => {
   $('symbols').value = DEFAULT_SYMBOLS;
   checkSymbols();
-  say('Separator symbols reset to the default. Deal again to apply them.');
+  endSecret('Separator symbols reset to the default. The old passphrase is cleared. Deal again to apply them.');
+});
+// Any change to a generation setting clears the secret. An invalid setting
+// clears it too, and the deal stays stopped until the setting is fixed.
+$('settings').addEventListener('input', () => {
+  endSecret('A setting changed. The old passphrase is cleared. Deal again.');
+});
+$('settings').addEventListener('change', () => {
+  endSecret('A setting changed. The old passphrase is cleared. Deal again.');
+});
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') endSecret('The tab was hidden. The passphrase is cleared. Deal again.');
+});
+window.addEventListener('pagehide', () => endSecret(''));
+window.addEventListener('pageshow', (event) => {
+  if (event.persisted) endSecret('The page was restored. The passphrase is cleared. Deal again.');
 });
 $('settings').addEventListener('submit', (event) => event.preventDefault());
 for (const name of FORMATS) {
