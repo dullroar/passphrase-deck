@@ -12,9 +12,9 @@ touches:
   - plans/review-hardening/steps/05-delivered-artifact.md
 lane: none
 gate: python3 scripts/verify_wordlist.py && python3 -m unittest discover -s tests -p 'test_*.py' && python3 scripts/check_feasibility.py && (cd tests/browser && npm ci && npx --no-install playwright install chromium && npm test) && python3 scripts/verify_release.py --self-test && python3 scripts/check_context.py && git diff --check
-claimed_by: ""
-claimed_at: ""
-evidence: "Gate run in parts on 2026-11-24, all passed: verify_wordlist, 37 unit tests, check_feasibility, 74 browser tests, verify_release --self-test, check_context, git diff --check."
+claimed_by: claude cli-default
+claimed_at: "2026-11-24T16:01:18Z"
+evidence: gate passed 2026-11-24 (driver-verified)
 ---
 
 # Specify the delivered artifact and make the digest check mandatory
