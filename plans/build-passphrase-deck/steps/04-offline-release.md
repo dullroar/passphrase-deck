@@ -1,6 +1,6 @@
 ---
 id: 04-offline-release
-status: pending
+status: done
 depends_on: [03-static-web]
 touches:
   - README.md
@@ -18,7 +18,9 @@ touches:
   - plans/build-passphrase-deck/steps/04-offline-release.md
 lane: none
 gate: python3 scripts/verify_wordlist.py && python3 -m unittest discover -s tests -p 'test_*.py' && (cd tests/browser && npm ci && npx --no-install playwright install chromium && npm test) && python3 scripts/verify_release.py --self-test && python3 scripts/check_context.py && git diff --check
-evidence: ""
+evidence: gate passed 2026-11-24 (driver-verified)
+claimed_by: claude cli-default
+claimed_at: "2026-11-24T02:08:52Z"
 ---
 
 # Package and verify the offline release
@@ -60,3 +62,18 @@ compatibility mode, and the threat model. Document reproduction from
 source and give the operator a checklist for independent review, iOS
 Safari and Android Chrome evidence, and authorized publication of source
 and checksums. Record gate evidence and stop for the operator handoff.
+
+## Resume notes
+
+Work is complete. Operator handoff is open (see docs/release.md):
+
+- Independent review of the exact release candidate and checksums.
+- Real iOS Safari and Android Chrome evidence.
+- Owner authorization of deployment and publication.
+- Then write `docs/release-evidence.json` and start step 05.
+
+Design notes: the release uses one classic-script layout (the wordlist is a
+script) so it opens from a local file and needs no `connect-src`. The
+packaged scripts are made from `web/core.js` and `web/app.js` at build time.
+`web/app.js` reads the wordlist from `PASSPHRASE_DECK_WORDLIST` when set.
+The production verifier is `verify_release.py --production`.

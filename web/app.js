@@ -82,9 +82,17 @@ async function copy(name) {
 
 async function start() {
   try {
-    const response = await fetch('eff_large_wordlist.txt', { cache: 'no-store', credentials: 'omit' });
-    if (!response.ok) throw new Error('fetch failed');
-    const buffer = await response.arrayBuffer();
+    // The packaged release embeds the wordlist in a script, so it needs no
+    // request and works from a local file. The source layout fetches it.
+    const embedded = globalThis.PASSPHRASE_DECK_WORDLIST;
+    let buffer;
+    if (typeof embedded === 'string') {
+      buffer = new TextEncoder().encode(embedded).buffer;
+    } else {
+      const response = await fetch('eff_large_wordlist.txt', { cache: 'no-store', credentials: 'omit' });
+      if (!response.ok) throw new Error('fetch failed');
+      buffer = await response.arrayBuffer();
+    }
     if (globalThis.crypto && crypto.subtle && (await digestHex(buffer)) !== DIGEST) {
       throw new Error('digest mismatch');
     }
