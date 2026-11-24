@@ -6,8 +6,9 @@ Modes:
   --self-test                       build twice and test every check
   --verify OUT                      check a build folder made by package_release.py
   --check-folder DIR --manifest F   check an unpacked folder against a manifest
-  --production URL --evidence F [--manifest F]
+  --production URL --evidence F --manifest F
                                     read-only check of the hosted release
+                                    (--manifest is required)
 
 The production mode only reads. It sends GET requests to the given URL.
 It never prints generated values and it holds none.
@@ -123,6 +124,8 @@ class PageScan(HTMLParser):
                 self.problems.append(f'inline event handler {name} on <{tag}>')
         if 'style' in attrs:
             self.problems.append(f'inline style on <{tag}>')
+        if 'ping' in attrs:
+            self.problems.append(f'ping attribute (tracking beacon) on <{tag}>')
         if tag == 'style':
             if self.inline:
                 self._open = []
@@ -502,19 +505,22 @@ def default_fetch(url):
         return response.status, headers, response.read(), response.geturl()
 
 
-def verify_production(url, evidence, manifest=None, fetch=default_fetch, today=None):
+def verify_production(url, evidence, manifest, fetch=default_fetch, today=None):
     """Compare the hosted files with the reviewed candidate. Return problems."""
     parsed = urlparse(url)
     if parsed.scheme != 'https' or not parsed.netloc or parsed.query or parsed.fragment \
             or not parsed.path.endswith('/passphrase.html'):
         return ['the production URL must be https and end with /passphrase.html']
+    if not isinstance(manifest, dict):
+        return ['the release manifest is required: pass --manifest']
     problems = check_evidence(evidence, today)
     candidate = evidence.get('candidate', {}) if isinstance(evidence, dict) else {}
     expected = candidate.get('assets') if isinstance(candidate.get('assets'), dict) else {}
-    if manifest is not None:
-        if manifest.get('single_file') != expected:
-            problems.append('the manifest single file differs from the candidate evidence')
-        expected = manifest.get('single_file', {})
+    if manifest.get('single_file') != expected:
+        problems.append('the manifest single file differs from the candidate evidence')
+    expected = manifest.get('single_file', {})
+    if not isinstance(expected, dict):
+        expected = {}
     deployed = evidence.get('deployment', {}) if isinstance(evidence, dict) else {}
     if isinstance(deployed, dict) and deployed.get('url') not in (None, url):
         problems.append('deployment.url differs from the verified URL')
@@ -684,6 +690,12 @@ def self_test():
                has(single_mutated("default-src 'none';", "default-src 'none'; connect-src 'self';"), 'connect-src'))
         expect('single: missing CSP found', has(single_mutated('Content-Security-Policy', 'X-Other'), 'CSP'))
         expect('single: iframe found', has(single_mutated('<main>', '<main><iframe></iframe>'), 'iframe'))
+        expect('single: ping beacon found',
+               has(single_mutated('<main>', '<main><a href="#" ping="https://example.com/p">x</a>'), 'ping'))
+        expect('single: tracking pixel found',
+               has(single_mutated('<main>', '<main><img src="https://example.com/p.gif">'), 'external <img>'))
+        expect('single: sendBeacon found',
+               has(single_mutated('use strict', 'use strict\'; navigator.sendBeacon("x"); \'', fix=True), 'sendBeacon'))
         expect('single: eval found', has(single_mutated('use strict', 'use strict\'; eval("1"); \'', fix=True), 'eval'))
         expect('single: absolute URL found',
                has(single_mutated('use strict', 'use strict\'; var u = "https://example.com/"; \'', fix=True), 'absolute URL'))
@@ -781,14 +793,19 @@ def self_test():
                 return 200, headers, files['passphrase.html'], final or target
             return fetch
 
-        run = lambda **kw: verify_production(url, kw.pop('evidence', evidence), fetch=host(**kw), today=today)
-        manifest_ok = lambda: verify_production(url, evidence, first, host(), today)
+        run = lambda **kw: verify_production(url, kw.pop('evidence', evidence), kw.pop('manifest', first),
+                                             fetch=host(**kw), today=today)
         expect('production passes', run() == [])
-        expect('production passes with the manifest', manifest_ok() == [])
+        expect('production refuses a missing manifest',
+               has(verify_production(url, evidence, None, fetch=host(), today=today), '--manifest'))
+        expect('production refuses a missing manifest on a good host',
+               verify_production(url, evidence, None, fetch=host(), today=today) != [])
+        expect('production refuses a manifest with other bytes',
+               has(run(manifest={**first, 'single_file': {'passphrase.html': sha256(b'x')}}), 'differs'))
         expect('production http refused', verify_production(
-            'http://example.test/p/passphrase.html', evidence, fetch=host(), today=today) != [])
+            'http://example.test/p/passphrase.html', evidence, first, fetch=host(), today=today) != [])
         expect('production slash URL refused', verify_production(
-            'https://example.test/p/', evidence, fetch=host(), today=today) != [])
+            'https://example.test/p/', evidence, first, fetch=host(), today=today) != [])
         changed = {'passphrase.html': single_bytes + b'\n<!-- changed -->'}
         expect('production byte mismatch found', has(run(files=changed), 'differ'))
         injected = {'passphrase.html': single_bytes.replace(b'</body>', b'<script>x()</script></body>', 1)}
@@ -806,7 +823,7 @@ def self_test():
         def refuse(target):
             raise ssl.SSLError('bad certificate')
 
-        expect('production TLS failure found', verify_production(url, evidence, fetch=refuse, today=today) != [])
+        expect('production TLS failure found', verify_production(url, evidence, first, fetch=refuse, today=today) != [])
 
     for label in failures:
         print(f'FAIL: {label}', file=sys.stderr)
@@ -847,6 +864,8 @@ def main(argv=None):
         if args.production:
             if not args.evidence:
                 parser.error('--production needs --evidence')
+            if manifest is None:
+                parser.error('--production needs --manifest')
             evidence = json.loads(Path(args.evidence).read_text('utf-8'))
             return report(verify_production(args.production, evidence, manifest),
                           'Production release verified.')

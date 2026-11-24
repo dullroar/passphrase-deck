@@ -171,6 +171,27 @@ generated passphrase only. Choosing a result by its content, or editing it,
 lowers the strength. The page adds no storage, no clipboard timer and no
 network call for this lifecycle.
 
+## Delivered artifact
+
+The user trusts the page that the host delivers, not the repository. A host
+or an edge proxy can change the bytes. The delivered page `passphrase.html`
+must meet all of these rules:
+
+1. It has no external executable resource. It loads no script, style,
+   frame or object from another origin or another file.
+2. The application makes no network request.
+3. It has no analytics and no telemetry.
+4. It has a restrictive CSP. The CSP allows only the hashed inline script and
+   the hashed inline style. It has no `unsafe-inline`, no `unsafe-eval` and
+   no `'self'`.
+5. It works offline.
+6. It matches a published release digest byte for byte.
+
+The production verifier (`scripts/verify_release.py --production`) checks the
+hosted bytes against the release manifest. It needs `--manifest`. It refuses
+to run without it. See `docs/release.md` for the map from each rule to a
+check.
+
 Use `secrets.token_bytes()` in Python and `crypto.getRandomValues()` in
 the browser. Use unbiased rejection in both runtimes: for a uniformly drawn
 unsigned integer in a range of size R, reject values at or above

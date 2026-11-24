@@ -7,7 +7,7 @@ touches:
   - docs/README.md
   - plans/build-passphrase-deck/steps/05-production-verification.md
 lane: none
-gate: python3 scripts/verify_release.py --production https://dullroar.com/passphrase.html --evidence docs/release-evidence.json && python3 scripts/check_context.py && git diff --check
+gate: python3 scripts/verify_release.py --production https://dullroar.com/passphrase.html --evidence docs/release-evidence.json --manifest "$RALPH_WORK/release/release-manifest.json" && python3 scripts/check_context.py && git diff --check
 evidence: ""
 ---
 
