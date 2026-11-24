@@ -1,6 +1,6 @@
 ---
 id: 04-policy-preflight
-status: pending
+status: done
 depends_on: [03-secret-lifecycle]
 touches:
   - SPEC.md
@@ -13,7 +13,7 @@ lane: none
 gate: python3 scripts/verify_wordlist.py && python3 -m unittest discover -s tests -p 'test_*.py' && python3 scripts/check_feasibility.py && (cd tests/browser && npm ci && npx --no-install playwright install chromium && npm test) && python3 scripts/verify_release.py --self-test && python3 scripts/check_context.py && git diff --check
 claimed_by: ""
 claimed_at: ""
-evidence: ""
+evidence: gate passed 2026-11-24 (full gate command; 36 Python tests, 74 browser tests, release self-test, context checks)
 ---
 
 # Show policy status before a deal

@@ -116,6 +116,36 @@ tuple conditions the output. The distinct symbols, distinct words, and
 digit alphabet make both format mappings injective. Maximum probability is
 exactly one divided by the total output count.
 
+## Policy preflight
+
+The policy check is deterministic. It needs no randomness and holds no
+secret. Both runtimes expose one pure function, `preflight` in
+`web/core.js` and `python/passphrase.py`. It takes the word list and the
+settings. It calls the same validation and `selectPolicy` (`select_policy`)
+that a deal uses. It never copies their rules. It never calls the random
+source.
+
+It returns one of three states:
+
+| State | Meaning | Result fields |
+| --- | --- | --- |
+| `malformed` | A setting is not well formed. The code is `POLICY_INVALID` or `SYMBOLS_INVALID`. | `code`, `message` |
+| `unsupported` | No scheme meets the policy. The code is `POLICY_UNSUPPORTED`. | `code`, `message` |
+| `valid` | A scheme meets the policy. | `count`, `digits`, `bits` |
+
+`bits` is the exact whole number of bits of the output count (the floor of
+its base-2 logarithm). It is never below the entropy floor. The scheme order
+and the error codes do not change. Python and JavaScript must return the same
+state, code, scheme and bit count for the same settings. The shared table
+`tests/fixtures/preflight.json` tests this.
+
+The page runs the preflight when it starts and on every setting change. It
+shows the state in a polite live region (`role="status"`). The text names the
+state in words: "Policy valid", "Policy unsupported" or "Policy malformed".
+For `unsupported`, it keeps the advice to raise the maximum or lower the
+target. The Deal button is off unless the state is `valid`. A deal that
+cannot run makes no secret.
+
 ## Secret lifecycle
 
 The page holds a secret only in script memory. The page shows it in the DOM

@@ -20,7 +20,11 @@ MAX_SYMBOLS = 32
 
 
 class PolicyError(ValueError):
-    pass
+    @property
+    def code(self):
+        """Return the error code. The bounds error has no prefix in its text."""
+        head = str(self).split(':', 1)[0]
+        return head if head in ('SYMBOLS_INVALID', 'POLICY_UNSUPPORTED') else 'POLICY_INVALID'
 
 
 class RandomLimitError(RuntimeError):
@@ -87,6 +91,21 @@ def select_policy(words, minimum, maximum, entropy, symbols=DEFAULT_SYMBOLS):
         if outputs >= 1 << entropy:
             return count, digits, outputs, suffix
     raise PolicyError('POLICY_UNSUPPORTED: increase maximum or lower entropy target')
+
+
+def preflight(words, minimum, maximum, entropy, symbols=DEFAULT_SYMBOLS):
+    """Check the settings. Read no random source. Hold no secret.
+
+    Return a dict. State "valid" has count, digits and bits (the exact whole
+    bits of the output count). The other states have code and message.
+    """
+    try:
+        count, digits, outputs, _ = select_policy(words, minimum, maximum, entropy, symbols)
+    except PolicyError as exc:
+        state = 'unsupported' if exc.code == 'POLICY_UNSUPPORTED' else 'malformed'
+        return {'state': state, 'code': exc.code, 'message': str(exc)}
+    return {'state': 'valid', 'count': count, 'digits': digits,
+            'bits': outputs.bit_length() - 1}
 
 
 def _unrank(words, count, digits, rank, suffix, capitalize=False, symbols='_'):
