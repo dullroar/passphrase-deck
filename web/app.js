@@ -43,21 +43,18 @@ function readInt(id) {
   return /^\d{1,4}$/.test(text) ? Number(text) : NaN;
 }
 
-// The last good symbol set. A bad edit keeps this value in use.
-let goodSymbols = DEFAULT_SYMBOLS;
-
+// Show the state of the symbol field. A bad set stops the deal.
 function checkSymbols() {
   const box = $('symbols-error');
   const input = $('symbols');
   try {
     validateSymbols(input.value);
-    goodSymbols = input.value;
     box.textContent = '';
     box.hidden = true;
     input.removeAttribute('aria-invalid');
     return true;
   } catch (error) {
-    box.textContent = `${error.message} The last good set is still in use.`;
+    box.textContent = `${error.message} No passphrase is dealt until you fix the set.`;
     box.hidden = false;
     input.setAttribute('aria-invalid', 'true');
     return false;
@@ -68,14 +65,17 @@ function deal() {
   clearSecrets();
   showError('');
   if (!words) return;
-  checkSymbols();
+  if (!checkSymbols()) {
+    say('');
+    return;
+  }
   try {
     const pair = generate(words, {
       minimum: readInt('minimum'),
       maximum: readInt('maximum'),
       entropy: readInt('entropy'),
       capitalize: $('capitalize').checked,
-      symbols: goodSymbols,
+      symbols: $('symbols').value,
     });
     secrets = { readable: pair.readable, compact: pair.compact };
     FORMATS.forEach(render);

@@ -46,10 +46,24 @@ claim that all other requests or all higher targets are feasible.
 
 A symbol set is a string of 1 to 32 distinct symbols. The default is
 `.,#$_!?` in that order. Each symbol must be a printable ASCII punctuation
-character. Reject letters, digits, space, hyphen, control characters and
-non-ASCII characters. Reject a repeated symbol. A word can contain a hyphen,
-so a hyphen would make the output ambiguous. Reject the whole set on any bad
-symbol. Never drop a symbol silently. Report the failed symbol by position and
+character. ASCII has exactly 32 punctuation characters, so the limit of 32
+equals the number of allowed characters. A set of all 32 is valid. Reject
+letters, digits, space, control characters and non-ASCII characters. Reject a
+repeated symbol. The hyphen is allowed (owner decision, 2026-11-24). A word
+can contain a hyphen, but this does not make the compact value ambiguous.
+The compact value is a concatenation of list words and one-character gap
+symbols. Any symbol that is not a letter or a hyphen splits the value
+without doubt. A hyphen symbol could be confused with a hyphen inside a word
+only if a hyphenated list word were a join of other list words, such as
+`a-b` with both `a` and `b` in the list. The four hyphenated list words are
+`drop-down`, `felt-tip`, `t-shirt` and `yo-yo`. Their parts `drop`, `felt`,
+`tip`, `t` and `yo` are not list words. So no hyphenated word splits. The
+Sardinas–Patterson test on the list words and the hyphen proves that the code
+is uniquely decodable. A permanent test runs this proof for the real list,
+also with capitalization, and checks it by brute force on small lists. The
+digits are at the end and have a fixed count, so they never join the parse.
+If a future wordlist breaks this proof, the hyphen must be banned again. Reject
+the whole set on any bad symbol. Never drop a symbol silently. Report the failed symbol by position and
 code point. The symbol set is not a secret.
 
 For each selected tuple, put one symbol and one space after each word except

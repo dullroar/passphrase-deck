@@ -38,8 +38,11 @@ is not a proof that every conceivable scheme is impossible.
 The count gives a min-entropy bound only with the uniform rank selection
 and exact formatting in the specification. Each valid tuple has equal
 probability. Every digit string has equal probability and is independent.
-The compact mapping keeps the symbols, and a symbol is never a hyphen, so distinct tuples do not collide,
-even when a word contains a hyphen. A fixed scheme selection has probability
+The compact mapping keeps the symbols. A symbol can be a hyphen. Distinct
+tuples still do not collide, even when a word contains a hyphen. No list word
+that has a hyphen splits into two list words. The words and the hyphen form a
+uniquely decodable code. [SPEC.md](../SPEC.md) and the tests state the proof.
+A fixed scheme selection has probability
 one. An exhausted random draw returns an error, so conditional on success
 the one accepted rank is uniform even with a fixed rejection bound.
 The script uses a small exhaustive public word fixture to check tuple counts

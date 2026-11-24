@@ -6,7 +6,7 @@ export const SCHEMES = [[4, 6], [6, 2]];
 export const MAX_DRAWS = 128;
 export const DEFAULT_SYMBOLS = '.,#$_!?';
 export const MAX_SYMBOLS = 32;
-const ALLOWED_SYMBOLS = new Set('!"#$%&\'()*+,./:;<=>?@[\\]^_`{|}~');
+const ALLOWED_SYMBOLS = new Set('!"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~');
 
 export class PolicyError extends Error {
   constructor(code, message, suggestion = null) {
@@ -38,7 +38,7 @@ export function validateSymbols(symbols) {
     const name = `symbol ${index + 1} (U+${hex})`;
     if (!ALLOWED_SYMBOLS.has(char)) {
       throw new PolicyError('SYMBOLS_INVALID',
-        `The ${name} is not allowed. Use ASCII punctuation. Do not use letters, digits, spaces or hyphens.`);
+        `The ${name} is not allowed. Use ASCII punctuation. Do not use letters, digits or spaces.`);
     }
     if (seen.has(char)) throw new PolicyError('SYMBOLS_INVALID', `The ${name} is repeated.`);
     seen.add(char);

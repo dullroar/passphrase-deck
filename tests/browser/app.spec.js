@@ -141,20 +141,42 @@ test('the symbol set is used, and a single symbol repeats', async ({ page }) => 
   expect(compact === readable.replaceAll(' ', '')).toBe(true);
 });
 
-test('a bad symbol set shows an error and keeps the last good set', async ({ page }) => {
+test('a bad symbol set stops the deal and shows no passphrase', async ({ page }) => {
   await ready(page);
-  await page.locator('#symbols').fill('%');
   const field = page.locator('#symbols');
-  for (const bad of ['', 'a', '1', '-', '. ', '%%', 'é', '.'.repeat(33)]) {
+  await field.fill('%');
+  await page.locator('#deal').click();
+  const first = await readSecrets(page);
+  expect(/^[a-z-]+(% [a-z-]+)+\d+$/.test(first.readable)).toBe(true);
+  for (const bad of ['', 'a', '1', '. ', '%%', 'é', '.'.repeat(33)]) {
     await field.fill(bad);
     await expect(page.locator('#symbols-error')).toBeVisible();
+    await expect(page.locator('#symbols-error')).not.toContainText('last good');
     await expect(field).toHaveAttribute('aria-invalid', 'true');
     await page.locator('#deal').click();
-    const { readable } = await readSecrets(page);
-    expect(/^[a-z-]+(% [a-z-]+)+\d+$/.test(readable)).toBe(true);
+    await expect(page.locator('#symbols-error')).toBeVisible();
+    const state = await page.evaluate(() => document.body.innerText);
+    expect(state.includes(first.readable)).toBe(false);
+    expect(state.includes(first.compact)).toBe(false);
+    await expect(page.locator('#readable-reveal')).toBeDisabled();
+    await expect(page.locator('#compact-reveal')).toBeDisabled();
+    await expect(page.locator('#readable-value')).toHaveText('Hidden');
   }
   await field.fill('%&');
   await expect(page.locator('#symbols-error')).toBeHidden();
+  await page.locator('#deal').click();
+  const { readable } = await readSecrets(page);
+  expect(/^[a-z-]+([%&] [a-z-]+)+\d+$/.test(readable)).toBe(true);
+});
+
+test('a hyphen is an allowed separator symbol', async ({ page }) => {
+  await ready(page);
+  await page.locator('#symbols').fill('-');
+  await expect(page.locator('#symbols-error')).toBeHidden();
+  await page.locator('#deal').click();
+  const { readable, compact } = await readSecrets(page);
+  expect(/^[a-z-]+(- [a-z-]+)+\d+$/.test(readable)).toBe(true);
+  expect(compact === readable.replaceAll(' ', '')).toBe(true);
 });
 
 test('the reset control restores the default symbols by keyboard', async ({ page }) => {
